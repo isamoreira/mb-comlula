@@ -98,7 +98,8 @@ function escrever(rel, conteudo) {
 
 function copiarPasta(origem, destino) {
   if (!fs.existsSync(origem)) return;
-  fs.cpSync(origem, destino, { recursive: true });
+  // Arquivos ocultos (ex.: .gitkeep) não vão para o site.
+  fs.cpSync(origem, destino, { recursive: true, filter: (f) => !path.basename(f).startsWith('.') || f === origem });
 }
 
 function resumo(texto, max) {

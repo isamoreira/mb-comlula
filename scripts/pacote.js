@@ -120,12 +120,16 @@ const central = [];
 let posicao = 0;
 const { hora, data } = horaDos(new Date());
 
+// Ordem: páginas, estilos e scripts primeiro; fotos e vídeos por último.
+// Se a extração parar no meio, o site (visual e páginas) já foi extraído.
+const pesado = (rel) => /^(media|og|icons)\//.test(rel);
+arquivos = arquivos.filter((rel) => !pesado(rel)).concat(arquivos.filter(pesado));
+
 for (const rel of arquivos) {
   const bruto = fs.readFileSync(path.join(DIST, rel));
-  const comprimido = zlib.deflateRawSync(bruto, { level: 9 });
-  // Imagens/vídeos já são comprimidos: guarda sem compressão se não ganhar nada.
-  const usarDeflate = comprimido.length < bruto.length;
-  const dados = usarDeflate ? comprimido : bruto;
+  // Sempre comprimido (método "deflate"): é o formato que todo extrator entende.
+  // Fotos e vídeos quase não diminuem, então usamos o nível mais rápido para eles.
+  const dados = zlib.deflateRawSync(bruto, { level: pesado(rel) ? 1 : 9 });
   const nome = Buffer.from(rel, 'utf8');
   const crc = crc32(bruto);
 
@@ -133,7 +137,7 @@ for (const rel of arquivos) {
   local.writeUInt32LE(0x04034b50, 0);
   local.writeUInt16LE(20, 4);
   local.writeUInt16LE(0x0800, 6); // nomes em UTF-8
-  local.writeUInt16LE(usarDeflate ? 8 : 0, 8);
+  local.writeUInt16LE(8, 8);
   local.writeUInt16LE(hora, 10);
   local.writeUInt16LE(data, 12);
   local.writeUInt32LE(crc, 14);
@@ -144,16 +148,17 @@ for (const rel of arquivos) {
 
   const cab = Buffer.alloc(46);
   cab.writeUInt32LE(0x02014b50, 0);
-  cab.writeUInt16LE(20, 4);
+  cab.writeUInt16LE((3 << 8) | 20, 4); // criado em "Unix": o servidor respeita as permissões abaixo
   cab.writeUInt16LE(20, 6);
   cab.writeUInt16LE(0x0800, 8);
-  cab.writeUInt16LE(usarDeflate ? 8 : 0, 10);
+  cab.writeUInt16LE(8, 10);
   cab.writeUInt16LE(hora, 12);
   cab.writeUInt16LE(data, 14);
   cab.writeUInt32LE(crc, 16);
   cab.writeUInt32LE(dados.length, 20);
   cab.writeUInt32LE(bruto.length, 24);
   cab.writeUInt16LE(nome.length, 28);
+  cab.writeUInt32LE(((0o100644 << 16) >>> 0), 38); // arquivo comum, permissão rw-r--r--
   cab.writeUInt32LE(posicao, 42);
   central.push(cab, nome);
 
