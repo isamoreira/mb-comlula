@@ -1,0 +1,24 @@
+{
+  "name": "espalha-hoje",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Espalha Hoje: os 3 conteúdos do dia, prontos para compartilhar.",
+  "scripts": {
+    "build": "node build.js",
+    "dev": "node dev.js",
+    "start": "node build.js && node dev.js",
+    "novo-post": "node scripts/novo-post.js",
+    "exemplos": "node scripts/gerar-exemplos.js",
+    "test": "node test/smoke.js",
+    "test:e2e": "node test/e2e.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "sharp": "^0.34.0"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.0.0"
+  }
+}

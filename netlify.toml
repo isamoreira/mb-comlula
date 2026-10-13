@@ -1,0 +1,7 @@
+# Configuração do Netlify (os cabeçalhos HTTP ficam em dist/_headers, gerado pelo build).
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"

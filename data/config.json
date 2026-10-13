@@ -1,0 +1,11 @@
+{
+  "project_name": "Espalha Hoje",
+  "tagline": "Os conteúdos do dia, prontos para compartilhar.",
+  "site_url": "https://espalha-hoje.pages.dev",
+  "primary_color": "#C4122F",
+  "logo": "",
+  "mission": "Compartilhe os 3 posts de hoje em pelo menos 2 redes e mande para 3 grupos de família ou amigos.",
+  "footer_identification": "Material de exemplo. Substitua este texto pela identificação de quem produz o conteúdo (nome, CNPJ quando aplicável).",
+  "default_credit": "Equipe Espalha Hoje",
+  "counter_endpoint": ""
+}

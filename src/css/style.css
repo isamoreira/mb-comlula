@@ -1,0 +1,566 @@
+/* Espalha Hoje — estilos (mobile-first).
+   A cor primária vem de /css/theme.css, gerado no build a partir de data/config.json. */
+
+:root {
+  --bg: #f6f6f4;
+  --surface: #ffffff;
+  --text: #141414;
+  --muted: #4a4a4a;
+  --border: #d6d6d2;
+  --focus: #0b57d0;
+  --media-bg: #1b1b1b;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.06);
+  --radius: 16px;
+  --toque: 48px; /* alvo mínimo de toque */
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f0f10;
+    --surface: #1b1b1d;
+    --text: #f4f4f4;
+    --muted: #c4c4c4;
+    --border: #3a3a3e;
+    --focus: #8ab4f8;
+    --media-bg: #000;
+    --shadow: none;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1.125rem; /* 18px: fonte grande */
+  line-height: 1.5;
+}
+
+img,
+video {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+
+/* Foco sempre visível (teclado e leitores de tela). */
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pular {
+  position: absolute;
+  left: 16px;
+  top: -100px;
+  z-index: 100;
+  background: var(--surface);
+  padding: 12px 16px;
+  border-radius: 8px;
+}
+.pular:focus {
+  top: 12px;
+}
+
+.wrap {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* ---------------- Topo ---------------- */
+.topo {
+  background: var(--primary);
+  color: var(--on-primary);
+  padding: 20px 0 22px;
+}
+.topo__marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+}
+.topo__logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  flex: none;
+}
+.topo__nome {
+  margin: 0;
+  font-size: 1.6rem;
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.topo__data {
+  margin: 10px 0 0;
+  font-size: 1rem;
+  opacity: 0.92;
+}
+.topo__data::first-letter {
+  text-transform: uppercase;
+}
+
+.missao {
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.18);
+  color: inherit;
+}
+.missao__rotulo {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+.missao p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.contador {
+  margin: 12px 0 0;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.aviso {
+  margin: 16px 0 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+}
+
+/* ---------------- Lista de posts ---------------- */
+main {
+  padding: 16px 0 32px;
+}
+
+.posts {
+  display: grid;
+  gap: 20px;
+}
+
+.carregando,
+.vazio {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* ---------------- Card ---------------- */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+.card__media {
+  background: var(--media-bg);
+  display: flex;
+  justify-content: center;
+}
+.card__media img {
+  width: 100%;
+  height: auto;
+  max-height: 78vh;
+  object-fit: contain;
+}
+.card__media--video {
+  aspect-ratio: 9 / 16;
+  max-height: 80vh;
+}
+.card__media--video video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.card__body {
+  padding: 16px 16px 18px;
+}
+
+.card__tema {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.card__titulo {
+  margin: 0 0 10px;
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+.card__titulo a {
+  text-decoration: none;
+}
+.card__titulo a:hover {
+  text-decoration: underline;
+}
+
+.card__legenda {
+  margin: 0 0 6px;
+  white-space: pre-line;
+}
+
+.card__tags {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.card__acoes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+.card__acoes > :first-child:nth-last-child(odd) {
+  grid-column: 1 / -1; /* quando há 3 botões, o primeiro ocupa a linha toda */
+}
+
+.card__credito {
+  margin: 14px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* ---------------- Botões ---------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--toque);
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.08s ease, filter 0.15s ease;
+}
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn--primary {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.btn--primary:hover {
+  filter: brightness(1.08);
+}
+
+.btn--grande {
+  width: 100%;
+  min-height: 60px;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+.btn--ghost:hover {
+  border-color: var(--text);
+}
+
+/* ---------------- Painel de compartilhar (bottom sheet) ---------------- */
+.painel {
+  border: 0;
+  padding: 0;
+  margin: auto auto 0; /* encostado embaixo no celular */
+  width: 100%;
+  max-width: 560px;
+  max-height: 92vh;
+  border-radius: 20px 20px 0 0;
+  background: var(--surface);
+  color: var(--text);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.painel::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+.painel[open] {
+  animation: subir 0.22s ease-out;
+}
+@keyframes subir {
+  from {
+    transform: translateY(40px);
+  }
+  to {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .painel[open] {
+    animation: none;
+  }
+}
+
+@media (min-width: 700px) {
+  .painel {
+    margin: auto; /* centralizado no computador */
+    border-radius: 20px;
+  }
+}
+
+.painel__inner {
+  padding: 10px 16px calc(20px + env(safe-area-inset-bottom));
+}
+.painel__alca {
+  width: 44px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--border);
+  margin: 0 auto 12px;
+}
+.painel__topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.painel h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+.painel__post {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+.painel h3 {
+  margin: 20px 0 10px;
+  font-size: 1rem;
+}
+.painel__fechar {
+  min-width: var(--toque);
+  padding: 8px 12px;
+}
+
+.redes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.rede {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.rede:hover {
+  border-color: var(--text);
+}
+.rede__marca {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 800;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+.rede--whatsapp .rede__marca { background: #1a9e4b; }
+.rede--telegram .rede__marca { background: #1d82b8; }
+.rede--x .rede__marca { background: #000; }
+.rede--threads .rede__marca { background: #000; }
+.rede--facebook .rede__marca { background: #1667d9; }
+.rede--reddit .rede__marca { background: #d63a00; }
+.rede--instagram .rede__marca { background: #c1135b; }
+.rede--tiktok .rede__marca { background: #000; }
+.rede--kwai .rede__marca { background: #c95a00; }
+
+.painel__nota {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.passos {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 2px dashed var(--border);
+}
+.passos ol {
+  margin: 0 0 12px;
+  padding-left: 22px;
+}
+.passos li + li {
+  margin-top: 4px;
+}
+
+.painel__extras {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 20px;
+}
+.painel__extras [data-nativo] {
+  grid-column: 1 / -1;
+}
+
+/* ---------------- Toast ---------------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  transform: translate(-50%, 20px);
+  max-width: calc(100% - 32px);
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 700;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 1000;
+}
+.toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* Quando o toast é exibido como popover (para ficar acima do painel), anulamos o estilo padrão. */
+.toast[popover] {
+  inset: auto auto calc(24px + env(safe-area-inset-bottom)) 50%;
+  margin: 0;
+  border: 0;
+  overflow: visible;
+}
+
+/* ---------------- Páginas de texto ---------------- */
+.texto h1 {
+  font-size: 1.6rem;
+  line-height: 1.2;
+  margin: 8px 0 16px;
+}
+.texto h2 {
+  font-size: 1.2rem;
+  margin: 24px 0 8px;
+}
+.voltar {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--toque);
+  font-weight: 700;
+}
+
+.arquivo__dia h2 {
+  font-size: 1.1rem;
+  margin: 24px 0 8px;
+}
+.arquivo__dia h2::first-letter {
+  text-transform: uppercase;
+}
+.arquivo__dia ul {
+  margin: 0;
+  padding-left: 20px;
+}
+.arquivo__dia li {
+  padding: 6px 0;
+}
+.arquivo__dia li a {
+  display: inline-block;
+  min-height: 32px;
+}
+.arquivo__tema {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* ---------------- Rodapé ---------------- */
+.rodape {
+  border-top: 1px solid var(--border);
+  padding: 24px 0 40px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.rodape p {
+  margin: 0 0 10px;
+}
+.rodape__ident {
+  color: var(--text);
+  white-space: pre-line;
+}
+.rodape__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+.rodape__links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--toque);
+}

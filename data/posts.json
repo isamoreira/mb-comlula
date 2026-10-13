@@ -1,0 +1,62 @@
+[
+  {
+    "id": "2026-10-13-01",
+    "date": "2026-10-13",
+    "title": "Exemplo 1: conta de luz explicada",
+    "theme": "Economia",
+    "media": {
+      "type": "image",
+      "file": "media/2026-10-13-01.jpg",
+      "thumb": "media/2026-10-13-01-thumb.jpg",
+      "alt": "Cartaz de exemplo em vermelho com o texto 'Exemplo 1 — Economia'"
+    },
+    "captions": [
+      "Este é um texto de exemplo para testar o Espalha Hoje. Troque por uma legenda de verdade.",
+      "Legenda de exemplo número 2: mesma ideia, palavras diferentes, para que cada pessoa publique um texto único.",
+      "Terceira variação de exemplo. Toque em \"Trocar legenda\" para ver as outras opções."
+    ],
+    "hashtags": ["#EspalhaHoje", "#Exemplo"],
+    "source_url": "",
+    "credit": "Equipe Espalha Hoje (exemplo)"
+  },
+  {
+    "id": "2026-10-13-02",
+    "date": "2026-10-13",
+    "title": "Exemplo 2: como funciona o posto de saúde",
+    "theme": "Saúde",
+    "media": {
+      "type": "image",
+      "file": "media/2026-10-13-02.jpg",
+      "thumb": "media/2026-10-13-02-thumb.jpg",
+      "alt": "Cartaz de exemplo em verde com o texto 'Exemplo 2 — Saúde'"
+    },
+    "captions": [
+      "Post de exemplo sobre saúde. Aqui entra a legenda principal do conteúdo.",
+      "Variação 2 do post de saúde: um jeito diferente de dizer a mesma coisa.",
+      "Variação 3: mais curta e direta."
+    ],
+    "hashtags": ["#EspalhaHoje", "#Saude"],
+    "source_url": "https://example.org/",
+    "credit": "Equipe Espalha Hoje (exemplo)"
+  },
+  {
+    "id": "2026-10-13-03",
+    "date": "2026-10-13",
+    "title": "Exemplo 3: escola em tempo integral",
+    "theme": "Educação",
+    "media": {
+      "type": "image",
+      "file": "media/2026-10-13-03.jpg",
+      "thumb": "media/2026-10-13-03-thumb.jpg",
+      "alt": "Cartaz de exemplo em azul com o texto 'Exemplo 3 — Educação'"
+    },
+    "captions": [
+      "Terceiro post de exemplo, sobre educação. Substitua por conteúdo real.",
+      "Outra forma de escrever a legenda do exemplo 3.",
+      "Legenda alternativa número 3 para o post de educação."
+    ],
+    "hashtags": ["#EspalhaHoje", "#Educacao"],
+    "source_url": "",
+    "credit": "Equipe Espalha Hoje (exemplo)"
+  }
+]
