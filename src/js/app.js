@@ -490,9 +490,8 @@
   function enviarArquivo(app) {
     var post = estado.post;
     var nome = NOMES_APP[app] || app;
+    // Só legenda + hashtags (sem link): o link fica para "Ou mande só o link".
     var texto = Share.textoCompleto(estado.legenda, post.hashtags, app);
-    // WhatsApp e outros apps mostram link clicável; Instagram/TikTok/Kwai não.
-    if (app === 'whatsapp' || app === 'nativo') texto += '\n\n' + Share.comUtm(urlDaPagina(post), app, post.date);
     var passos = painel.querySelector('[data-passos]');
 
     function mostrarPassos() {

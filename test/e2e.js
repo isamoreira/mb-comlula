@@ -229,7 +229,7 @@ async function teste(nome, fn) {
     await p2.close();
   });
 
-  await teste('WhatsApp no celular envia o ARQUIVO com legenda e link (Status)', async () => {
+  await teste('WhatsApp no celular envia o ARQUIVO com legenda, sem link (Status)', async () => {
     const p2 = await paginaCelular();
     await p2.click('.card [data-acao="compartilhar"]');
     await esperarPronto(p2);
@@ -237,7 +237,7 @@ async function teste(nome, fn) {
     await p2.waitForFunction(() => window.__compartilhado);
     const c = await p2.evaluate(() => window.__compartilhado);
     assert.strictEqual(c.arquivos.length, 1);
-    assert.ok(c.texto.includes('utm_source=whatsapp'), c.texto);
+    assert.ok(c.texto.length > 0 && !c.texto.includes('http'), 'não deveria ter link: ' + c.texto);
     // "Ou mande só o link" continua sendo o wa.me.
     const soLink = await p2.$eval('#painel a[data-rede="whatsapp"]', (a) => a.href);
     assert.ok(soLink.startsWith('https://wa.me/?text='));

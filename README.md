@@ -247,7 +247,7 @@ Todos os links levam para a página do post (`/p/<id>/`), com UTM: `utm_source=<
 
 | Rede | O que acontece |
 |---|---|
-| WhatsApp | Em "Enviar a foto/vídeo": envia o **arquivo** com a legenda e o link pela lista de apps do celular (dá para postar no **Status**). Em "Ou mande só o link": `wa.me` com legenda + hashtags + link, com prévia da imagem. |
+| WhatsApp | Em "Enviar a foto/vídeo": envia o **arquivo** com a legenda (sem link) pela lista de apps do celular (dá para postar no **Status**). Em "Ou mande só o link": `wa.me` com legenda + hashtags + link, com prévia da imagem. |
 | Telegram | `t.me/share/url` com link e legenda. |
 | X | `twitter.com/intent/tweet` com legenda e link. Se passar de 280 caracteres, tira as hashtags e, se preciso, corta a legenda com "…". |
 | Threads | `threads.net/intent/post` com legenda + link (limite de 500 caracteres respeitado). |
