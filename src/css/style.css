@@ -445,6 +445,14 @@ main {
   color: var(--muted);
 }
 
+.painel__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--toque);
+  font-weight: 700;
+  color: var(--text);
+}
+
 .passos {
   margin-top: 12px;
   padding: 14px 16px;

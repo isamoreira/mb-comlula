@@ -159,6 +159,7 @@ Vídeos: se o [ffmpeg](https://ffmpeg.org) estiver instalado, a capa é tirada d
 
 - `media.type`: `image` ou `video`. Vídeo exige `thumb` (capa).
 - `media.alt` é opcional (padrão: o título), mas ajuda muito na acessibilidade.
+- **Hashtags:** no máximo 5, as mais importantes primeiro (o Instagram não aceita mais que 5). No X vão só as 2 primeiras e no Threads só a 1ª. Hashtags ficam **só** no campo `hashtags`, nunca dentro das legendas.
 - Use 3 variações de legenda: cada pessoa recebe uma sorteada e pode tocar em "Trocar legenda". Isso evita milhares de contas postando texto idêntico.
 - O build valida o arquivo e avisa com mensagens claras se faltar algo (arquivo de mídia, data no formato errado, id repetido…).
 - Vídeo vertical 9:16 em MP4 (H.264) é o formato que funciona em todos os celulares.
@@ -245,7 +246,7 @@ Todos os links levam para a página do post (`/p/<id>/`), com UTM: `utm_source=<
 
 | Rede | O que acontece |
 |---|---|
-| WhatsApp | `wa.me/?text=` com legenda + hashtags + link. |
+| WhatsApp | No celular: envia a **foto/vídeo** com a legenda e o link pela lista de apps (funciona também para postar no **Status**). Abaixo há a opção "só o texto com o link" (`wa.me`), útil para grupos. No computador: `wa.me` com legenda + hashtags + link. |
 | Telegram | `t.me/share/url` com link e legenda. |
 | X | `twitter.com/intent/tweet` com legenda e link. Se passar de 280 caracteres, tira as hashtags e, se preciso, corta a legenda com "…". |
 | Threads | `threads.net/intent/post` com legenda + link (limite de 500 caracteres respeitado). |

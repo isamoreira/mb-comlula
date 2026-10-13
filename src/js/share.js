@@ -28,9 +28,20 @@
     return url + sep + 'utm_source=' + enc(rede) + '&utm_medium=social&utm_campaign=' + enc(campanha);
   }
 
-  // Legenda + hashtags em um único texto.
-  function textoCompleto(legenda, hashtags) {
-    var tags = (hashtags || []).join(' ').trim();
+  // Máximo de hashtags por rede. O Instagram aceita no máximo 5; no X e no Threads
+  // poucas hashtags funcionam melhor (o Threads só reconhece 1 "tópico" por post).
+  // Ficam as primeiras da lista: coloque as mais importantes primeiro.
+  var LIMITE_HASHTAGS = { x: 2, threads: 1 };
+  var LIMITE_HASHTAGS_PADRAO = 5;
+
+  function hashtagsPara(hashtags, rede) {
+    var max = LIMITE_HASHTAGS[rede] || LIMITE_HASHTAGS_PADRAO;
+    return (hashtags || []).slice(0, max);
+  }
+
+  // Legenda + hashtags (já limitadas para a rede) em um único texto.
+  function textoCompleto(legenda, hashtags, rede) {
+    var tags = hashtagsPara(hashtags, rede).join(' ').trim();
     return tags ? legenda + '\n\n' + tags : legenda;
   }
 
@@ -47,8 +58,8 @@
   }
 
   // Ajusta o texto a um limite: tenta legenda + hashtags, depois só legenda, depois corta.
-  function caber(legenda, hashtags, max) {
-    var completo = textoCompleto(legenda, hashtags);
+  function caber(legenda, hashtags, max, rede) {
+    var completo = textoCompleto(legenda, hashtags, rede);
     if (tamanho(completo) <= max) return completo;
     if (tamanho(legenda) <= max) return legenda;
     return cortar(legenda, max);
@@ -66,17 +77,17 @@
    */
   function urlCompartilhar(rede, p) {
     var link = comUtm(p.pageUrl, rede, p.data);
-    var texto = textoCompleto(p.legenda, p.hashtags);
+    var texto = textoCompleto(p.legenda, p.hashtags, rede);
     switch (rede) {
       case 'whatsapp':
         return 'https://wa.me/?text=' + enc(texto + '\n\n' + link);
       case 'telegram':
         return 'https://t.me/share/url?url=' + enc(link) + '&text=' + enc(texto);
       case 'x':
-        return 'https://twitter.com/intent/tweet?text=' + enc(caber(p.legenda, p.hashtags, LIMITE_X)) + '&url=' + enc(link);
+        return 'https://twitter.com/intent/tweet?text=' + enc(caber(p.legenda, p.hashtags, LIMITE_X, 'x')) + '&url=' + enc(link);
       case 'threads': {
         var max = LIMITE_THREADS - tamanho(link) - 2;
-        return 'https://www.threads.net/intent/post?text=' + enc(caber(p.legenda, p.hashtags, max) + '\n\n' + link);
+        return 'https://www.threads.net/intent/post?text=' + enc(caber(p.legenda, p.hashtags, max, 'threads') + '\n\n' + link);
       }
       case 'facebook':
         return 'https://www.facebook.com/sharer/sharer.php?u=' + enc(link);
@@ -92,6 +103,8 @@
     REDES_APP: REDES_APP,
     comUtm: comUtm,
     textoCompleto: textoCompleto,
+    hashtagsPara: hashtagsPara,
+    LIMITE_HASHTAGS_PADRAO: LIMITE_HASHTAGS_PADRAO,
     urlCompartilhar: urlCompartilhar,
   };
 

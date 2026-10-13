@@ -58,10 +58,18 @@ async function novoPost(posts, config) {
     legendas.push(l.replace(/\\n/g, '\n'));
   }
 
-  const hashtags = (await perguntar('Hashtags (separadas por espaço)'))
-    .split(/[\s,]+/)
-    .filter(Boolean)
-    .map((h) => (h.startsWith('#') ? h : '#' + h));
+  let hashtags = [
+    ...new Set(
+      (await perguntar('Hashtags, até 5, as mais importantes primeiro (separadas por espaço)'))
+        .split(/[\s,]+/)
+        .filter((h) => h && h !== '#')
+        .map((h) => (h.startsWith('#') ? h : '#' + h))
+    ),
+  ];
+  if (hashtags.length > 5) {
+    hashtags = hashtags.slice(0, 5);
+    console.log(`  → Fiquei com as 5 primeiras (${hashtags.join(' ')}). O Instagram não aceita mais que isso.`);
+  }
 
   const origem = limparCaminho(
     await perguntar('Caminho da mídia (pode arrastar o arquivo para cá)', {

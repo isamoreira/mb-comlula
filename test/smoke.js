@@ -37,7 +37,8 @@ const esperado = {
   whatsapp: `https://wa.me/?text=${enc(texto + '\n\n' + link('whatsapp'))}`,
   telegram: `https://t.me/share/url?url=${enc(link('telegram'))}&text=${enc(texto)}`,
   x: `https://twitter.com/intent/tweet?text=${enc(texto)}&url=${enc(link('x'))}`,
-  threads: `https://www.threads.net/intent/post?text=${enc(texto + '\n\n' + link('threads'))}`,
+  // Threads só reconhece 1 hashtag ("tópico") por post.
+  threads: `https://www.threads.net/intent/post?text=${enc('Legenda de teste com acentuação: ação & opinião\n\n#um' + '\n\n' + link('threads'))}`,
   facebook: `https://www.facebook.com/sharer/sharer.php?u=${enc(link('facebook'))}`,
   reddit: `https://www.reddit.com/submit?url=${enc(link('reddit'))}&title=${enc('Título curto')}`,
 };
@@ -64,6 +65,17 @@ teste('Threads: texto + link cabem em 500 caracteres', () => {
   const t = url.searchParams.get('text');
   assert.ok(Array.from(t).length <= 500, 'tamanho: ' + Array.from(t).length);
   assert.ok(t.endsWith(link('threads')));
+});
+
+teste('hashtags: no máximo 5 (Instagram), 2 no X e 1 no Threads', () => {
+  const muitas = ['#a', '#b', '#c', '#d', '#e', '#f', '#g'];
+  assert.strictEqual(Share.textoCompleto('L', muitas), 'L\n\n#a #b #c #d #e');
+  assert.strictEqual(Share.textoCompleto('L', muitas, 'instagram'), 'L\n\n#a #b #c #d #e');
+  assert.strictEqual(Share.textoCompleto('L', muitas, 'whatsapp'), 'L\n\n#a #b #c #d #e');
+  assert.strictEqual(Share.textoCompleto('L', muitas, 'x'), 'L\n\n#a #b');
+  assert.strictEqual(Share.textoCompleto('L', muitas, 'threads'), 'L\n\n#a');
+  const wa = decodeURIComponent(Share.urlCompartilhar('whatsapp', { ...dados, hashtags: muitas }));
+  assert.ok(wa.includes('#e') && !wa.includes('#f'));
 });
 
 teste('UTM é adicionado com & quando a URL já tem ?', () => {

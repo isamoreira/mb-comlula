@@ -136,7 +136,8 @@ async function teste(nome, fn) {
     const post = posts.find((p) => p.id === card.id);
     const dados = { pageUrl: `${BASE}/p/${post.id}/`, legenda: card.legenda, hashtags: post.hashtags, titulo: post.title, data: post.date };
     const hrefs = await page.$$eval('#painel a[data-rede]', (as) => as.map((a) => [a.dataset.rede, a.href]));
-    assert.strictEqual(hrefs.length, 6);
+    // 6 redes + o link extra "só texto com o link no WhatsApp".
+    assert.deepStrictEqual([...new Set(hrefs.map((h) => h[0]))].sort(), ['facebook', 'reddit', 'telegram', 'threads', 'whatsapp', 'x']);
     for (const [rede, href] of hrefs) {
       assert.strictEqual(href, Share.urlCompartilhar(rede, dados), 'URL errada para ' + rede);
       assert.ok(decodeURIComponent(href).includes(`utm_source=${rede}&utm_medium=social&utm_campaign=${post.date}`), 'UTM ausente em ' + rede);
@@ -196,6 +197,30 @@ async function teste(nome, fn) {
     assert.strictEqual(c.arquivos.length, 1);
     assert.ok(c.arquivos[0].startsWith(doDia[0].id), c.arquivos[0]);
     assert.ok(c.texto.length > 0);
+    await p2.close();
+  });
+
+  await teste('WhatsApp no celular manda o ARQUIVO (foto/vídeo) com legenda e link', async () => {
+    const p2 = await novaPagina({ data: ultimoDia + 'T15:00:00Z' });
+    await p2.evaluateOnNewDocument(() => {
+      navigator.canShare = () => true;
+      navigator.share = (d) => {
+        window.__compartilhado = { arquivos: (d.files || []).map((f) => f.name), texto: d.text };
+        return Promise.resolve();
+      };
+    });
+    await p2.goto(BASE + '/', { waitUntil: 'networkidle0' });
+    await p2.click('.card [data-acao="compartilhar"]');
+    await new Promise((r) => setTimeout(r, 400));
+    await p2.click('#painel a[data-rede="whatsapp"]:not([data-so-link])');
+    await p2.waitForFunction(() => window.__compartilhado);
+    const c = await p2.evaluate(() => window.__compartilhado);
+    assert.strictEqual(c.arquivos.length, 1);
+    assert.ok(c.texto.includes('utm_source=whatsapp'), c.texto);
+    assert.strictEqual(p2.target().browserContext().targets().filter((t) => /wa\.me/.test(t.url())).length, 0, 'não deveria abrir wa.me');
+    // O link "só texto" continua sendo o wa.me.
+    const soLink = await p2.$eval('#painel a[data-so-link]', (a) => a.href);
+    assert.ok(soLink.startsWith('https://wa.me/?text='));
     await p2.close();
   });
 

@@ -199,7 +199,7 @@
       (post.theme ? '<p class="card__tema">' + esc(post.theme) + '</p>' : '') +
       '<h2 class="card__titulo" id="titulo-' + esc(post.id) + '">' + tituloHtml + '</h2>' +
       '<p class="card__legenda" aria-live="polite">' + esc(legendas[atual] || '') + '</p>' +
-      (post.hashtags && post.hashtags.length ? '<p class="card__tags">' + esc(post.hashtags.join(' ')) + '</p>' : '') +
+      (post.hashtags && post.hashtags.length ? '<p class="card__tags">' + esc(Share.hashtagsPara(post.hashtags).join(' ')) + '</p>' : '') +
       '<button type="button" class="btn btn--primary btn--grande" data-acao="compartilhar">' + ICONES.share + '<span>Compartilhar</span></button>' +
       '<div class="card__acoes">' +
       botaoTrocar +
@@ -356,6 +356,13 @@
       // Redes com link: o próprio <a target="_blank"> abre a rede.
       if (el.hasAttribute('data-rede')) {
         var rede = el.getAttribute('data-rede');
+        // WhatsApp: no celular, manda a FOTO/VÍDEO pela lista de apps (assim funciona
+        // também no Status). O link wa.me só manda texto: fica como opção "só texto + link".
+        if (rede === 'whatsapp' && !el.hasAttribute('data-so-link') && estado.promessaArquivo) {
+          ev.preventDefault();
+          compartilharNoApp('whatsapp', { comLink: true });
+          return;
+        }
         if (rede === 'facebook') {
           // O Facebook só aceita o link: copiamos a legenda para a pessoa colar.
           copiarTexto(Share.textoCompleto(estado.legenda, post.hashtags));
@@ -379,12 +386,14 @@
     });
   }
 
-  // Instagram/TikTok/Kwai: Web Share API com arquivo; senão, instruções "baixe + cole".
-  function compartilharNoApp(rede) {
+  // Instagram/TikTok/Kwai (e WhatsApp no celular): Web Share API com o arquivo;
+  // senão, instruções "baixe + cole".
+  function compartilharNoApp(rede, opcoes) {
     var post = estado.post;
-    var texto = Share.textoCompleto(estado.legenda, post.hashtags);
+    var texto = Share.textoCompleto(estado.legenda, post.hashtags, rede);
+    if (opcoes && opcoes.comLink) texto += '\n\n' + Share.comUtm(urlDaPagina(post), rede, post.date);
     var passos = painel.querySelector('[data-passos]');
-    var nomeRede = { instagram: 'Instagram', tiktok: 'TikTok', kwai: 'Kwai' }[rede] || rede;
+    var nomeRede = { instagram: 'Instagram', tiktok: 'TikTok', kwai: 'Kwai', whatsapp: 'WhatsApp' }[rede] || rede;
 
     function mostrarPassos() {
       passos.querySelector('[data-passos-rede]').textContent = nomeRede;

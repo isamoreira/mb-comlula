@@ -8,3 +8,8 @@ Thumbs.db
 dist-teste/
 *.zip
 .pacote-enviado.json
+
+# Mídias reais ficam fora do Git (estão no PC e na Hostinger; dá para reimportar do Pode Espalhar)
+media/*
+!media/.gitkeep
+site.zip

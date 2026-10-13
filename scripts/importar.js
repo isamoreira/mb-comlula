@@ -10,6 +10,7 @@
 // Opções (para automatizar):
 //   --ids=2219220,2218993   importa esses conteúdos direto (ids do Pode Espalhar), sem lista
 //   --data=2026-10-14       data em que os posts aparecem no Espalha Hoje (padrão: hoje)
+//   --hashtags=Lula13,ViraVoto   hashtags de todos os posts (máximo 5)
 //   --sim                   aceita os padrões sem perguntar (sem variações de legenda, sem build)
 'use strict';
 
@@ -181,7 +182,20 @@ async function escolher() {
 // Importação de um conteúdo
 // ---------------------------------------------------------------------------
 
-async function importar(c, data, posts, config) {
+// Hashtags: aceita "#a #b", "a, b"... e guarda no máximo 5 (limite do Instagram).
+const MAX_HASHTAGS = 5;
+function lerHashtags(texto) {
+  const todas = [...new Set(String(texto).split(/[\s,]+/).filter((h) => h && h !== '#').map((h) => (h.startsWith('#') ? h : '#' + h)))];
+  if (todas.length > MAX_HASHTAGS) {
+    console.log(`    → ${todas.length} hashtags: fiquei com as ${MAX_HASHTAGS} primeiras (${todas.slice(0, MAX_HASHTAGS).join(' ')}). O Instagram não aceita mais que isso.`);
+  }
+  return todas.slice(0, MAX_HASHTAGS);
+}
+function ehSoHashtags(texto) {
+  return /^\s*(#\S+[\s,]*)+$/.test(texto);
+}
+
+async function importar(c, data, posts, config, hashtagsGerais) {
   console.log(`\n— ${c.titulo}`);
   const repetido = posts.find((p) => p.source_url === c.link && p.date === data);
   if (repetido) {
@@ -228,14 +242,26 @@ async function importar(c, data, posts, config) {
 
   // Legendas: a do Pode Espalhar + variações opcionais (evita texto idêntico em muitas contas).
   const legendas = [c.legenda || c.titulo];
+  let hashtags = hashtagsGerais;
   console.log(`  Legenda: "${cortar(legendas[0], 120)}"`);
   if (!SEM_PERGUNTAS) {
-    console.log('  Variações de legenda (opcional). Enter vazio para seguir.');
+    console.log('  Variações de legenda: outro jeito de escrever o MESMO texto (opcional, sem hashtags). Enter vazio para seguir.');
     for (;;) {
       const v = (await rl.question(`    Variação ${legendas.length + 1}: `)).trim();
       if (!v) break;
+      if (ehSoHashtags(v)) {
+        hashtags = lerHashtags(v);
+        console.log(`    → Isso são hashtags: usei como hashtags deste post (${hashtags.join(' ')}).`);
+        continue;
+      }
+      if (!/\p{L}/u.test(v)) {
+        console.log('    → Ignorado (sem texto).');
+        continue;
+      }
       legendas.push(v.replace(/\\n/g, '\n'));
     }
+    const r = (await rl.question(`  Hashtags deste post, até 5, as mais importantes primeiro (Enter = ${hashtags.join(' ') || 'nenhuma'}): `)).trim();
+    if (r) hashtags = lerHashtags(r);
   }
 
   const post = {
@@ -245,7 +271,7 @@ async function importar(c, data, posts, config) {
     theme: c.campanha || c.categoria || '',
     media: { type: m.tipo, file: arquivo, thumb, alt: c.titulo },
     captions: legendas,
-    hashtags: [],
+    hashtags,
     source_url: c.link,
     credit: config.default_credit || 'Pode Espalhar (podeespalhar.com.br)',
   };
@@ -273,23 +299,19 @@ async function importar(c, data, posts, config) {
     }
   }
 
-  const hashtags = (await perguntar('Hashtags para esses posts (Enter = nenhuma): ', ''))
-    .split(/[\s,]+/)
-    .filter(Boolean)
-    .map((h) => (h.startsWith('#') ? h : '#' + h));
+  // Hashtags gerais (padrão para todos); cada post pode ter as suas depois.
+  const hashtags = lerHashtags(
+    args.hashtags || (await perguntar('Hashtags gerais, até 5, as mais importantes primeiro (Enter = nenhuma): ', ''))
+  );
 
   const importados = [];
   for (const c of escolhidos) {
     try {
-      const p = await importar(c, data, posts, config);
+      const p = await importar(c, data, posts, config, hashtags);
       if (p) importados.push(p);
     } catch (e) {
       console.log(`  ✖ Erro ao importar "${c.titulo}": ${e.message}`);
     }
-  }
-  if (hashtags.length && importados.length) {
-    importados.forEach((p) => (p.hashtags = hashtags));
-    salvarJson(ARQ_POSTS, posts);
   }
 
   console.log(`\n${importados.length} post(s) importado(s) para ${data}.`);

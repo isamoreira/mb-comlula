@@ -47,6 +47,7 @@ const COR = /^#[0-9a-f]{6}$/i.test(config.primary_color || '') ? config.primary_
 function validarPosts() {
   if (!Array.isArray(posts)) falhar('data/posts.json precisa ser uma lista [ ... ].');
   const erros = [];
+  const avisos = [];
   const ids = new Set();
   posts.forEach((p, i) => {
     const onde = `post #${i + 1} (${p && p.id ? p.id : 'sem id'})`;
@@ -64,7 +65,14 @@ function validarPosts() {
       if (p.media.type === 'video' && !p.media.thumb) erros.push(`${onde}: vídeos precisam de "media.thumb" (imagem de capa).`);
     }
     if (p.hashtags && !Array.isArray(p.hashtags)) erros.push(`${onde}: "hashtags" deve ser uma lista.`);
+    if (Array.isArray(p.hashtags) && p.hashtags.length > 5)
+      avisos.push(`${onde}: ${p.hashtags.length} hashtags. Só as 5 primeiras são usadas (limite do Instagram).`);
+    (p.captions || []).forEach((c, j) => {
+      if (/^\s*(#\S+\s*)+$/.test(c)) avisos.push(`${onde}: a legenda ${j + 1} só tem hashtags. Hashtags vão no campo "hashtags".`);
+      else if (!/\p{L}/u.test(c)) avisos.push(`${onde}: a legenda ${j + 1} está vazia ou sem texto ("${c}").`);
+    });
   });
+  avisos.forEach((a) => console.warn('⚠ ' + a));
   if (erros.length) falhar('Problemas em data/posts.json:\n  - ' + erros.join('\n  - '));
 }
 
@@ -277,7 +285,8 @@ function painelHtml() {
       ${redeHtml('facebook', 'Facebook', 'f')}
       ${redeHtml('reddit', 'Reddit', 'r')}
     </div>
-    <p class="painel__nota">No Facebook, a legenda é copiada automaticamente: é só colar.</p>
+    <p class="painel__nota">No celular, o WhatsApp recebe a foto/vídeo com a legenda (dá para postar no Status). No Facebook, a legenda é copiada automaticamente: é só colar.</p>
+    <p class="painel__nota"><a class="painel__link" data-rede="whatsapp" data-so-link href="#" target="_blank" rel="noopener noreferrer">Mandar só o texto com o link no WhatsApp</a></p>
 
     <h3>Instagram, TikTok e Kwai</h3>
     <div class="redes">
