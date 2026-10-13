@@ -22,7 +22,9 @@ async function faltandoNoServidor(site, dist, arquivos, aoConferir) {
     try {
       const r = await fetch(url, { method: 'HEAD', cache: 'no-store', signal: AbortSignal.timeout(20000) });
       respondeu = true;
-      const tamanho = Number(r.headers.get('content-length'));
+      // Se a Hostinger comprime o arquivo (br/gzip), o tamanho informado é o comprimido: não dá para comparar.
+      const comprimido = !!r.headers.get('content-encoding');
+      const tamanho = comprimido ? 0 : Number(r.headers.get('content-length'));
       if (!r.ok || (tamanho && tamanho !== fs.statSync(path.join(dist, rel)).size)) faltando.add(rel);
     } catch (e) {
       faltando.add(rel);

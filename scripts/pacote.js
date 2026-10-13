@@ -1,13 +1,9 @@
 // Compacta o conteúdo de dist/ em "site.zip", pronto para enviar à Hostinger
 // (Gerenciador de Arquivos → public_html → Upload → Extrair).
 // O zip leva o CONTEÚDO de dist/ (inclusive o .htaccess), não a pasta em si.
-// Uso: npm run pacote                 (faz o build e gera o zip com o que falta ou mudou no servidor)
-//      npm run pacote -- --completo    (zip com o site inteiro, sem conferir o servidor)
-//
-// Sem --completo, o pacote confere o site no ar e inclui tudo o que estiver faltando lá
-// (ex.: se a public_html foi apagada) + o que mudou desde o último pacote.
-//
-// O registro do que já foi empacotado fica em .pacote-enviado.json (não vai para o site).
+// Uso: npm run pacote                    (faz o build e gera o zip com o site INTEIRO)
+//      npm run pacote -- --so-mudancas   (só o que falta ou mudou no servidor: zip menor;
+//                                          NÃO apague nada na public_html antes de extrair)
 'use strict';
 
 const fs = require('fs');
@@ -19,7 +15,9 @@ const RAIZ = path.join(__dirname, '..');
 const DIST = path.join(RAIZ, 'dist');
 const SAIDA = path.join(RAIZ, 'site.zip');
 const REGISTRO = path.join(RAIZ, '.pacote-enviado.json');
-const COMPLETO = process.argv.includes('--completo');
+// Padrão: o site INTEIRO (pode substituir a public_html sem perder nada).
+// Com --so-mudancas: só o que falta ou mudou no servidor (zip menor, mas NÃO pode apagar a public_html antes).
+const COMPLETO = !process.argv.includes('--so-mudancas');
 
 // CRC-32 (exigido pelo formato zip).
 const TABELA = new Uint32Array(256).map((_, n) => {
@@ -175,7 +173,8 @@ fs.writeFileSync(REGISTRO, JSON.stringify(atual, null, 1));
 const mb = (fs.statSync(SAIDA).size / 1024 / 1024).toFixed(1);
 console.log(`✔ ${path.basename(SAIDA)} criado: ${central.length / 2} arquivos, ${mb} MB (${resumo}).`);
 console.log('  Hostinger: Gerenciador de Arquivos → public_html → Upload do site.zip → botão direito → Extrair.');
-console.log('  ⚠ NÃO apague os arquivos da public_html antes de extrair: o zip só traz o que falta ou mudou.');
+if (COMPLETO) console.log('  O zip tem o site inteiro: extrair por cima ou trocar a public_html por ele, os dois funcionam.');
+else console.log('  ⚠ NÃO apague os arquivos da public_html antes de extrair: o zip só traz o que falta ou mudou.');
 console.log('  Depois de extrair, rode "npm run conferir" para ver se está tudo no ar.');
 })().catch((e) => {
   console.error('✖ ' + e.message);

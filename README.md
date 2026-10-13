@@ -178,12 +178,11 @@ Todo dia:
    Escolha os 3 conteúdos (ex.: `2 5 9`), confirme a data, escreva variações de legenda se quiser, a missão do dia e responda `S` para gerar o `site.zip`.
 2. **Confira** (opcional, 30 s): `npm run dev` e abra http://localhost:8080.
 3. **Envie para a Hostinger** (1 min): hPanel → **Arquivos → Gerenciador de Arquivos** → abra `public_html` → **Upload** do `site.zip` → clique com o botão direito no `site.zip` → **Extrair** (na própria `public_html`, substituindo os arquivos) → apague o `site.zip` de lá.
-   ⚠ **Nunca apague os outros arquivos da `public_html`** (vídeos, fotos, ícones): o zip só traz o que falta ou mudou.
 4. **Confira** (10 s): `npm run conferir`. Ele verifica no site publicado se todos os arquivos estão lá (inclusive os vídeos) e se o contador responde. Se faltar algo, rode `npm run pacote` de novo: o zip já inclui o que estiver faltando.
 
 Pronto: o site já mostra os posts novos.
 
-O `npm run pacote` **confere o site no ar** antes de montar o zip: entra tudo o que estiver faltando no servidor (por exemplo, se alguém apagou a `public_html`) e tudo o que mudou. Vídeos que já estão lá não são reenviados. Para gerar o site inteiro sem conferir: `npm run pacote -- --completo`.
+O `site.zip` tem sempre o **site inteiro**: pode extrair por cima dos arquivos da `public_html` ou trocar a pasta inteira por ele, os dois funcionam. (Os números do contador ficam fora da `public_html` e não são afetados.) Opção avançada: `npm run pacote -- --so-mudancas` gera um zip só com o que falta ou mudou no servidor; nesse caso, **nunca** apague a `public_html` antes de extrair.
 
 **Dica:** prepare os posts de amanhã hoje à noite (com a data de amanhã). Eles ficam escondidos até o dia chegar, então dá para enviar o `site.zip` de uma vez.
 
