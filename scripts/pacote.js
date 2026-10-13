@@ -1,8 +1,11 @@
 // Compacta o conteúdo de dist/ em "site.zip", pronto para enviar à Hostinger
 // (Gerenciador de Arquivos → public_html → Upload → Extrair).
 // O zip leva o CONTEÚDO de dist/ (inclusive o .htaccess), não a pasta em si.
-// Uso: npm run pacote                 (faz o build e gera o zip só com o que mudou desde o último pacote)
-//      npm run pacote -- --completo    (zip com o site inteiro: use no primeiro envio ou se apagar a public_html)
+// Uso: npm run pacote                 (faz o build e gera o zip com o que falta ou mudou no servidor)
+//      npm run pacote -- --completo    (zip com o site inteiro, sem conferir o servidor)
+//
+// Sem --completo, o pacote confere o site no ar e inclui tudo o que estiver faltando lá
+// (ex.: se a public_html foi apagada) + o que mudou desde o último pacote.
 //
 // O registro do que já foi empacotado fica em .pacote-enviado.json (não vai para o site).
 'use strict';
@@ -10,6 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const { listar, faltandoNoServidor } = require('./lib/servidor');
 
 const RAIZ = path.join(__dirname, '..');
 const DIST = path.join(RAIZ, 'dist');
@@ -27,13 +31,6 @@ function crc32(buf) {
   let c = 0xffffffff;
   for (const b of buf) c = TABELA[(c ^ b) & 0xff] ^ (c >>> 8);
   return (c ^ 0xffffffff) >>> 0;
-}
-
-function listar(dir, base = '') {
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-    const rel = base ? `${base}/${e.name}` : e.name;
-    return e.isDirectory() ? listar(path.join(dir, e.name), rel) : [rel];
-  });
 }
 
 // Data/hora no formato do DOS, usado pelo zip.
@@ -87,14 +84,38 @@ async function perguntarEndereco() {
   process.exit(p.status || 0);
 }
 
-// Só os arquivos novos ou alterados desde o último pacote (vídeos antigos não são reenviados).
+(async () => {
 const crypto = require('crypto');
+const site = ogUrl.replace(/\/+$/, '');
 const anterior = !COMPLETO && fs.existsSync(REGISTRO) ? JSON.parse(fs.readFileSync(REGISTRO, 'utf8')) : {};
 const atual = {};
-const arquivos = listar(DIST).filter((rel) => {
+const todos = listar(DIST);
+todos.forEach((rel) => {
   atual[rel] = crypto.createHash('sha1').update(fs.readFileSync(path.join(DIST, rel))).digest('hex');
-  return anterior[rel] !== atual[rel];
 });
+
+let arquivos;
+let resumo;
+if (COMPLETO) {
+  arquivos = todos;
+  resumo = 'site completo';
+} else {
+  process.stdout.write(`Conferindo o que já está em ${site}… `);
+  const faltando = await faltandoNoServidor(site, DIST, todos);
+  if (faltando === null) {
+    console.log('sem acesso ao site.');
+    // Sem conferir o servidor, o seguro é mandar tudo.
+    arquivos = todos;
+    resumo = 'site completo (não deu para conferir o servidor)';
+  } else {
+    console.log(`${faltando.size} arquivo(s) faltando ou diferentes no servidor.`);
+    // Faltando no servidor + alterados desde o último pacote + arquivos ocultos (.htaccess).
+    arquivos = todos.filter((rel) => faltando.has(rel) || anterior[rel] !== atual[rel] || path.basename(rel).startsWith('.'));
+    resumo = 'o que falta ou mudou no servidor';
+    const midias = [...faltando].filter((r) => r.startsWith('media/'));
+    if (midias.length) console.log(`  Inclui ${midias.length} mídia(s) que não estão no servidor (ex.: ${midias[0]}).`);
+  }
+}
 
 const partes = [];
 const central = [];
@@ -152,7 +173,11 @@ fim.writeUInt32LE(posicao, 16);
 fs.writeFileSync(SAIDA, Buffer.concat([...partes, ...central, fim]));
 fs.writeFileSync(REGISTRO, JSON.stringify(atual, null, 1));
 const mb = (fs.statSync(SAIDA).size / 1024 / 1024).toFixed(1);
-const tipo = Object.keys(anterior).length ? 'só o que mudou desde o último pacote' : 'site completo';
-console.log(`✔ ${path.basename(SAIDA)} criado: ${central.length / 2} arquivos, ${mb} MB (${tipo}).`);
-if (Object.keys(anterior).length) console.log('  Se o envio anterior não chegou a ser feito (ou a public_html foi apagada), rode: npm run pacote -- --completo');
+console.log(`✔ ${path.basename(SAIDA)} criado: ${central.length / 2} arquivos, ${mb} MB (${resumo}).`);
 console.log('  Hostinger: Gerenciador de Arquivos → public_html → Upload do site.zip → botão direito → Extrair.');
+console.log('  ⚠ NÃO apague os arquivos da public_html antes de extrair: o zip só traz o que falta ou mudou.');
+console.log('  Depois de extrair, rode "npm run conferir" para ver se está tudo no ar.');
+})().catch((e) => {
+  console.error('✖ ' + e.message);
+  process.exit(1);
+});

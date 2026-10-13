@@ -185,8 +185,8 @@ try {
   };
 
   await teste('cada toque em uma rede conta 1 vez por post/rede/aparelho', async () => {
-    await tocar(1, '#painel a[data-so-link]'); // WhatsApp
-    await tocar(1, '#painel a[data-so-link]'); // repetido: não conta
+    await tocar(1, '#painel a[data-rede="whatsapp"]'); // WhatsApp
+    await tocar(1, '#painel a[data-rede="whatsapp"]'); // repetido: não conta
     await tocar(1, '#painel a[data-rede="telegram"]');
     await tocar(2, '#painel a[data-rede="x"]');
     await new Promise((r) => setTimeout(r, 800));

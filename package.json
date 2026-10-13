@@ -10,6 +10,7 @@
     "importar": "node scripts/importar.js",
     "novo-post": "node scripts/novo-post.js",
     "pacote": "node build.js && node scripts/pacote.js",
+    "conferir": "node build.js && node scripts/conferir.js",
     "exemplos": "node scripts/gerar-exemplos.js",
     "test": "node build.js --exemplo && node test/smoke.js",
     "test:e2e": "node build.js --exemplo && node test/e2e.js",

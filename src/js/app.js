@@ -168,7 +168,7 @@
         '<div class="card__media card__media--video">' +
         '<video controls playsinline preload="none" poster="/' + esc(m.thumb || '') + '" aria-label="Vídeo: ' + esc(alt) + '">' +
         '<source src="/' + esc(m.file) + '">' +
-        'Seu navegador não reproduz este vídeo. Use o botão "Baixar mídia".' +
+        'Seu navegador não reproduz este vídeo. Use o botão "Salvar no celular".' +
         '</video></div>'
       );
     }
@@ -204,7 +204,7 @@
       '<div class="card__acoes">' +
       botaoTrocar +
       '<button type="button" class="btn btn--ghost" data-acao="copiar">' + ICONES.copy + '<span>Copiar legenda</span></button>' +
-      '<a class="btn btn--ghost" data-acao="baixar" href="/' + esc(post.media.file) + '" download="' + esc(nomeDoArquivo(post)) + '">' + ICONES.download + '<span>Baixar mídia</span></a>' +
+      '<a class="btn btn--ghost" data-acao="baixar" href="/' + esc(post.media.file) + '" download="' + esc(nomeDoArquivo(post)) + '">' + ICONES.download + '<span>Salvar no celular</span></a>' +
       '</div>' +
       '<p class="card__credito">Crédito: ' + esc(post.credit || config.default_credit || '') + fonte + '</p>' +
       '</div></article>'
@@ -248,7 +248,7 @@
     } else if (acao === 'copiar') {
       copiarLegenda(post, legendaAtual(card));
     } else if (acao === 'baixar') {
-      toast('Baixando mídia…');
+      salvarNoCelular(post, ev);
     } else if (acao === 'compartilhar') {
       abrirPainel(post, legendaAtual(card), alvo);
     }
@@ -262,45 +262,127 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Painel de compartilhamento (bottom sheet)
+  // Arquivos de mídia (para enviar a foto/vídeo pela lista de apps do celular)
   // ---------------------------------------------------------------------------
-  var painel = document.getElementById('painel');
-  var estado = { post: null, legenda: '', arquivo: null, origem: null };
 
   // O navegador consegue compartilhar arquivos pela lista nativa de apps?
   function suportaArquivos() {
     try {
-      if (!navigator.canShare || !window.File) return false;
+      if (!navigator.canShare || !navigator.share || !window.File) return false;
       return navigator.canShare({ files: [new File(['x'], 'teste.jpg', { type: 'image/jpeg' })] });
     } catch (e) {
       return false;
     }
   }
 
-  // Baixa a mídia em segundo plano quando o painel abre, para que o
-  // navigator.share() seja chamado logo no toque (exigência do Safari).
-  function prepararArquivo(post) {
-    var url = '/' + post.media.file;
-    return fetch(url)
+  function podeEnviar(dados) {
+    try {
+      return typeof navigator.canShare === 'function' && navigator.canShare(dados);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Um download por post, guardado: abrir o painel de novo não baixa outra vez.
+  // O arquivo precisa estar PRONTO antes do toque: o iPhone só abre a lista de apps
+  // se navigator.share() for chamado logo no toque.
+  var arquivos = {};
+  function obterArquivo(post) {
+    var item = arquivos[post.id];
+    if (item) return item;
+    item = arquivos[post.id] = { pronto: null, erro: false, progresso: 0, ouvintes: [] };
+    function avisar() {
+      item.ouvintes.forEach(function (f) {
+        f(item);
+      });
+    }
+    fetch('/' + post.media.file)
       .then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.blob();
+        var total = Number(r.headers.get('content-length')) || 0;
+        if (!r.body || !total || !window.ReadableStream) return r.blob();
+        // Lê aos pedaços para mostrar "Preparando… 40%".
+        var leitor = r.body.getReader();
+        var pedacos = [];
+        var recebido = 0;
+        function ler() {
+          return leitor.read().then(function (p) {
+            if (p.done) return new Blob(pedacos, { type: r.headers.get('content-type') || '' });
+            pedacos.push(p.value);
+            recebido += p.value.length;
+            item.progresso = Math.min(99, Math.round((recebido / total) * 100));
+            avisar();
+            return ler();
+          });
+        }
+        return ler();
       })
       .then(function (blob) {
-        var tipo = blob.type || (post.media.type === 'video' ? 'video/mp4' : 'image/jpeg');
-        return new File([blob], nomeDoArquivo(post), { type: tipo });
+        var tipo = blob.type && blob.type.indexOf('text/') !== 0 ? blob.type : post.media.type === 'video' ? 'video/mp4' : 'image/jpeg';
+        item.pronto = new File([blob], nomeDoArquivo(post), { type: tipo });
+        item.progresso = 100;
+        avisar();
+      })
+      .catch(function () {
+        item.erro = true;
+        avisar();
       });
+    return item;
   }
+
+  function nomeDaMidia(post) {
+    return post.media.type === 'video' ? 'vídeo' : 'foto';
+  }
+
+  // "Salvar no celular": no celular, abre a lista de apps só com o arquivo, onde aparece
+  // "Salvar vídeo"/"Salvar imagem" (vai para a Galeria). No computador, baixa normalmente.
+  function salvarNoCelular(post, ev) {
+    if (!suportaArquivos()) {
+      toast('Baixando…');
+      return; // segue o link de download
+    }
+    ev.preventDefault();
+    var item = obterArquivo(post);
+    if (item.erro) {
+      toast('Não foi possível pegar a ' + nomeDaMidia(post) + '. Tente de novo mais tarde.');
+      return;
+    }
+    if (!item.pronto) {
+      toast('Preparando a ' + nomeDaMidia(post) + '… ' + item.progresso + '%. Toque de novo quando terminar.');
+      item.ouvintes.push(function (it) {
+        if (it.pronto && !it.avisadoSalvar) {
+          it.avisadoSalvar = true;
+          toast('Pronto! Toque em "Salvar no celular" de novo.');
+        }
+      });
+      return;
+    }
+    var dados = { files: [item.pronto] };
+    if (!podeEnviar(dados)) {
+      location.href = '/' + post.media.file;
+      return;
+    }
+    toast(post.media.type === 'video' ? 'Escolha "Salvar vídeo" na lista.' : 'Escolha "Salvar imagem" na lista.');
+    navigator.share(dados).catch(function () {});
+  }
+
+  // ---------------------------------------------------------------------------
+  // Painel de compartilhamento (bottom sheet)
+  // ---------------------------------------------------------------------------
+  var painel = document.getElementById('painel');
+  var estado = { post: null, legenda: '', origem: null };
+  var NOMES_APP = { whatsapp: 'WhatsApp', instagram: 'Instagram', tiktok: 'TikTok', kwai: 'Kwai', nativo: 'app' };
 
   function abrirPainel(post, legenda, origem) {
     if (!painel) return;
     estado.post = post;
     estado.legenda = legenda;
     estado.origem = origem;
-    estado.arquivo = null;
-    estado.promessaArquivo = null;
 
     painel.querySelector('[data-painel-titulo]').textContent = post.title;
+    painel.querySelectorAll('[data-midia-nome]').forEach(function (el) {
+      el.textContent = nomeDaMidia(post);
+    });
 
     // Links das redes com legenda + UTM.
     var dados = { pageUrl: urlDaPagina(post), legenda: legenda, hashtags: post.hashtags, titulo: post.title, data: post.date };
@@ -308,28 +390,53 @@
       a.href = Share.urlCompartilhar(a.getAttribute('data-rede'), dados);
     });
 
-    // Download avulso dentro do painel.
-    var baixar = painel.querySelector('[data-painel-baixar]');
-    baixar.href = '/' + post.media.file;
-    baixar.setAttribute('download', nomeDoArquivo(post));
+    // Download/salvar.
+    painel.querySelectorAll('[data-painel-baixar]').forEach(function (a) {
+      a.href = '/' + post.media.file;
+      a.setAttribute('download', nomeDoArquivo(post));
+    });
 
     painel.querySelector('[data-passos]').hidden = true;
-    painel.querySelector('[data-nativo]').hidden = !navigator.share;
+    var celular = suportaArquivos();
+    painel.classList.toggle('painel--celular', celular);
+    painel.querySelector('[data-app="nativo"]').hidden = !celular;
 
-    if (suportaArquivos()) {
-      estado.promessaArquivo = prepararArquivo(post).then(
-        function (f) {
-          estado.arquivo = f;
-          return f;
-        },
-        function () {
-          return null;
-        }
-      );
+    if (celular) {
+      var item = obterArquivo(post);
+      atualizarPreparo(item);
+      if (item.ouvintes.indexOf(atualizarPreparo) === -1) item.ouvintes.push(atualizarPreparo);
+    } else {
+      painel.querySelector('[data-progresso]').hidden = true;
+      definirAppsAtivos(true);
     }
 
     if (typeof painel.showModal === 'function') painel.showModal();
     else painel.setAttribute('open', '');
+  }
+
+  function definirAppsAtivos(ativos) {
+    painel.querySelectorAll('[data-app]').forEach(function (b) {
+      b.setAttribute('aria-disabled', ativos ? 'false' : 'true');
+      b.classList.toggle('rede--esperando', !ativos);
+    });
+  }
+
+  // Mostra "Preparando o vídeo… 40%" e libera os botões quando o arquivo está pronto.
+  function atualizarPreparo(item) {
+    if (!estado.post || arquivos[estado.post.id] !== item) return;
+    var el = painel.querySelector('[data-progresso]');
+    el.hidden = false;
+    el.classList.toggle('painel__progresso--erro', item.erro);
+    if (item.erro) {
+      el.textContent = 'Não foi possível preparar a ' + nomeDaMidia(estado.post) + '. Use "Ou mande só o link" abaixo.';
+      definirAppsAtivos(false);
+    } else if (item.pronto) {
+      el.textContent = '✔ ' + (estado.post.media.type === 'video' ? 'Vídeo pronto' : 'Foto pronta') + '! Escolha onde enviar:';
+      definirAppsAtivos(true);
+    } else {
+      el.textContent = 'Preparando o ' + (estado.post.media.type === 'video' ? 'vídeo' : 'arquivo') + '… ' + item.progresso + '%';
+      definirAppsAtivos(false);
+    }
   }
 
   function fecharPainel() {
@@ -353,16 +460,9 @@
       if (!el || !estado.post) return;
       var post = estado.post;
 
-      // Redes com link: o próprio <a target="_blank"> abre a rede.
+      // "Ou mande só o link": o próprio <a target="_blank"> abre a rede.
       if (el.hasAttribute('data-rede')) {
         var rede = el.getAttribute('data-rede');
-        // WhatsApp: no celular, manda a FOTO/VÍDEO pela lista de apps (assim funciona
-        // também no Status). O link wa.me só manda texto: fica como opção "só texto + link".
-        if (rede === 'whatsapp' && !el.hasAttribute('data-so-link') && estado.promessaArquivo) {
-          ev.preventDefault();
-          compartilharNoApp('whatsapp', { comLink: true });
-          return;
-        }
         if (rede === 'facebook') {
           // O Facebook só aceita o link: copiamos a legenda para a pessoa colar.
           copiarTexto(Share.textoCompleto(estado.legenda, post.hashtags));
@@ -372,86 +472,111 @@
         return;
       }
 
-      // Instagram, TikTok, Kwai.
+      // "Enviar a foto/vídeo": WhatsApp, Instagram, TikTok, Kwai, outro app.
       if (el.hasAttribute('data-app')) {
-        compartilharNoApp(el.getAttribute('data-app'));
+        enviarArquivo(el.getAttribute('data-app'));
         return;
       }
 
       var acao = el.getAttribute('data-painel-acao');
       if (acao === 'fechar') fecharPainel();
       else if (acao === 'copiar') copiarLegenda(post, estado.legenda);
-      else if (acao === 'baixar') toast('Baixando mídia…');
-      else if (acao === 'nativo') compartilharNativo();
+      else if (acao === 'baixar') salvarNoCelular(post, ev);
     });
   }
 
-  // Instagram/TikTok/Kwai (e WhatsApp no celular): Web Share API com o arquivo;
-  // senão, instruções "baixe + cole".
-  function compartilharNoApp(rede, opcoes) {
+  // Envia a foto/vídeo + legenda pela lista de apps do celular.
+  // No computador (sem essa função), mostra "1. Baixe a mídia 2. Cole a legenda".
+  function enviarArquivo(app) {
     var post = estado.post;
-    var texto = Share.textoCompleto(estado.legenda, post.hashtags, rede);
-    if (opcoes && opcoes.comLink) texto += '\n\n' + Share.comUtm(urlDaPagina(post), rede, post.date);
+    var nome = NOMES_APP[app] || app;
+    var texto = Share.textoCompleto(estado.legenda, post.hashtags, app);
+    // WhatsApp e outros apps mostram link clicável; Instagram/TikTok/Kwai não.
+    if (app === 'whatsapp' || app === 'nativo') texto += '\n\n' + Share.comUtm(urlDaPagina(post), app, post.date);
     var passos = painel.querySelector('[data-passos]');
-    var nomeRede = { instagram: 'Instagram', tiktok: 'TikTok', kwai: 'Kwai', whatsapp: 'WhatsApp' }[rede] || rede;
 
     function mostrarPassos() {
-      passos.querySelector('[data-passos-rede]').textContent = nomeRede;
+      passos.querySelector('[data-passos-rede]').textContent = app === 'nativo' ? 'app' : nome;
       passos.hidden = false;
       passos.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
 
-    // A legenda já vai copiada: a maioria desses apps ignora o texto do share.
-    copiarTexto(texto);
-    avisarCompartilhamento(post.id, rede);
-
-    if (!estado.promessaArquivo) {
+    if (!suportaArquivos()) {
+      copiarTexto(texto);
+      avisarCompartilhamento(post.id, app);
       toast('Legenda copiada!');
       mostrarPassos();
       return;
     }
 
-    var tentar = function (arquivo) {
-      var dados = { files: [arquivo], text: texto, title: post.title };
-      var pode = false;
-      try {
-        pode = !!arquivo && typeof navigator.canShare === 'function' && navigator.canShare(dados);
-      } catch (e) {
-        pode = false;
-      }
-      if (!pode) {
-        toast('Legenda copiada!');
-        mostrarPassos();
+    var item = obterArquivo(post);
+    if (item.erro) {
+      toast('Não foi possível preparar a ' + nomeDaMidia(post) + '. Mande só o link.');
+      return;
+    }
+    if (!item.pronto) {
+      toast('Só um instante: preparando… ' + item.progresso + '%');
+      return;
+    }
+
+    var dados = { files: [item.pronto], text: texto };
+    if (!podeEnviar(dados)) dados = { files: [item.pronto] };
+    if (!podeEnviar(dados)) {
+      copiarTexto(texto);
+      toast('Legenda copiada!');
+      mostrarPassos();
+      return;
+    }
+
+    // A legenda também vai copiada: vários apps ignoram o texto e é só colar.
+    copiarTexto(texto);
+    avisarCompartilhamento(post.id, app);
+    toast(app === 'nativo' ? 'Legenda copiada! Escolha o app na lista.' : 'Legenda copiada! Escolha o ' + nome + ' na lista.');
+    navigator.share(dados).catch(function (erro) {
+      if (erro && erro.name === 'AbortError') return; // pessoa cancelou
+      if (erro && erro.name === 'NotAllowedError') {
+        toast('Toque de novo em ' + nome + '.');
         return;
       }
-      toast('Legenda copiada! Escolha o ' + nomeRede + ' na lista.');
-      navigator.share(dados).catch(function (erro) {
-        if (erro && erro.name === 'AbortError') return; // pessoa cancelou
-        if (erro && erro.name === 'NotAllowedError') {
-          toast('Arquivo pronto! Toque de novo em ' + nomeRede + '.');
-          return;
-        }
-        mostrarPassos();
-      });
-    };
-
-    // Se o arquivo já foi baixado, compartilha imediatamente (mantém o "toque" válido).
-    if (estado.arquivo) tentar(estado.arquivo);
-    else {
-      toast('Preparando a mídia…');
-      estado.promessaArquivo.then(tentar);
-    }
+      mostrarPassos();
+    });
   }
 
-  // "Mais apps": lista nativa do celular com legenda + link.
-  function compartilharNativo() {
-    var post = estado.post;
-    var link = Share.comUtm(urlDaPagina(post), 'nativo', post.date);
-    avisarCompartilhamento(post.id, 'nativo');
-    navigator
-      .share({ title: post.title, text: Share.textoCompleto(estado.legenda, post.hashtags), url: link })
-      .catch(function () {});
+  // ---------------------------------------------------------------------------
+  // Aviso para quem abriu o link dentro do Instagram/Facebook/TikTok
+  // (esses navegadores internos não deixam baixar nem enviar arquivos).
+  // ---------------------------------------------------------------------------
+  function avisoNavegadorInterno() {
+    var ua = navigator.userAgent || '';
+    var app = /Instagram/i.test(ua)
+      ? 'Instagram'
+      : /FBAN|FBAV|FB_IAB|FBIOS/i.test(ua)
+      ? 'Facebook'
+      : /musical_ly|TikTok|BytedanceWebview/i.test(ua)
+      ? 'TikTok'
+      : /Kwai/i.test(ua)
+      ? 'Kwai'
+      : /Line\//i.test(ua)
+      ? 'Line'
+      : '';
+    if (!app) return;
+    var main = document.querySelector('main .wrap');
+    if (!main) return;
+    var android = /Android/i.test(ua);
+    var aviso = document.createElement('div');
+    aviso.className = 'aviso aviso--app';
+    aviso.setAttribute('role', 'alert');
+    var abrir = android
+      ? '<a class="btn btn--primary" href="intent://' + esc(location.host + location.pathname + location.search) +
+        '#Intent;scheme=https;package=com.android.chrome;end">Abrir no Chrome</a>'
+      : '';
+    aviso.innerHTML =
+      '<p><strong>Você abriu pelo ' + esc(app) + '.</strong> Aqui dentro não dá para baixar nem enviar fotos e vídeos.</p>' +
+      '<p>' + (android ? 'Toque no botão abaixo ou nos <strong>3 pontinhos ⋮</strong> e escolha <strong>"Abrir no navegador"</strong>.' : 'Toque em <strong>⋯</strong> (no canto da tela) e escolha <strong>"Abrir no navegador"</strong> ou <strong>"Abrir no Safari"</strong>.') + '</p>' +
+      abrir;
+    main.insertBefore(aviso, main.firstChild);
   }
+  avisoNavegadorInterno();
 
   // ---------------------------------------------------------------------------
   // Rodapé: créditos dos posts exibidos

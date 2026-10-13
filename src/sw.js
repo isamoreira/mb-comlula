@@ -3,7 +3,7 @@
 // - Páginas e posts.json: tenta a rede primeiro (conteúdo sempre atualizado), cai no cache se offline.
 // - Imagens de /media e /og: cache primeiro (são arquivos que não mudam).
 // - Vídeos passam direto (o cache de vídeo com "Range" é problemático em alguns celulares).
-// As marcações __VERSAO__ e __ARQUIVOS__ são preenchidas pelo build.js.
+// A versão e a lista de arquivos abaixo são preenchidas pelo build.js.
 
 var VERSAO = '__VERSAO__';
 var CACHE_SHELL = 'eh-shell-' + VERSAO;

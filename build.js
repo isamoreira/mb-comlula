@@ -277,24 +277,16 @@ function painelHtml() {
       <button type="button" class="btn btn--ghost painel__fechar" data-painel-acao="fechar" aria-label="Fechar painel">✕</button>
     </div>
 
-    <h3>Escolha a rede</h3>
+    <h3>Enviar a <span data-midia-nome>foto/vídeo</span> com a legenda</h3>
+    <p class="painel__progresso" data-progresso role="status" hidden></p>
     <div class="redes">
-      ${redeHtml('whatsapp', 'WhatsApp', 'W')}
-      ${redeHtml('telegram', 'Telegram', 'T')}
-      ${redeHtml('x', 'X (Twitter)', 'X')}
-      ${redeHtml('threads', 'Threads', '@')}
-      ${redeHtml('facebook', 'Facebook', 'f')}
-      ${redeHtml('reddit', 'Reddit', 'r')}
-    </div>
-    <p class="painel__nota">No celular, o WhatsApp recebe a foto/vídeo com a legenda (dá para postar no Status). No Facebook, a legenda é copiada automaticamente: é só colar.</p>
-    <p class="painel__nota"><a class="painel__link" data-rede="whatsapp" data-so-link href="#" target="_blank" rel="noopener noreferrer">Mandar só o texto com o link no WhatsApp</a></p>
-
-    <h3>Instagram, TikTok e Kwai</h3>
-    <div class="redes">
+      ${redeHtml('whatsapp', 'WhatsApp', 'W', true)}
       ${redeHtml('instagram', 'Instagram', 'IG', true)}
       ${redeHtml('tiktok', 'TikTok', 'TT', true)}
       ${redeHtml('kwai', 'Kwai', 'K', true)}
+      ${redeHtml('nativo', 'Outro app', '+', true)}
     </div>
+    <p class="painel__nota painel__nota--celular">Abre a lista de apps do celular já com o arquivo. Dá para postar no Status e nos Stories. A legenda também fica copiada: se não aparecer, é só colar.</p>
     <div class="passos" data-passos hidden>
       <p><strong>Para postar no <span data-passos-rede>app</span>:</strong></p>
       <ol>
@@ -307,10 +299,20 @@ function painelHtml() {
       </div>
     </div>
 
+    <h3>Ou mande só o link</h3>
+    <div class="redes">
+      ${redeHtml('whatsapp', 'WhatsApp', 'W')}
+      ${redeHtml('telegram', 'Telegram', 'T')}
+      ${redeHtml('x', 'X (Twitter)', 'X')}
+      ${redeHtml('threads', 'Threads', '@')}
+      ${redeHtml('facebook', 'Facebook', 'f')}
+      ${redeHtml('reddit', 'Reddit', 'r')}
+    </div>
+    <p class="painel__nota">O link mostra a prévia com a imagem. No Facebook, a legenda é copiada automaticamente: é só colar.</p>
+
     <div class="painel__extras">
+      <a class="btn btn--ghost" data-painel-acao="baixar" data-painel-baixar href="#" download>Salvar no celular</a>
       <button type="button" class="btn btn--ghost" data-painel-acao="copiar">Copiar legenda</button>
-      <a class="btn btn--ghost" data-painel-acao="baixar" data-painel-baixar href="#" download>Baixar mídia</a>
-      <button type="button" class="btn btn--ghost" data-painel-acao="nativo" data-nativo hidden>Mais apps do celular…</button>
     </div>
   </div>
 </dialog>`;
@@ -678,8 +680,9 @@ async function main() {
   ].concat(temIcones ? ['/icons/icon-192.png'] : []);
   const sw = fs
     .readFileSync(path.join(SRC, 'sw.js'), 'utf8')
-    .replace('__VERSAO__', VERSAO)
-    .replace('__ARQUIVOS__', JSON.stringify(shell));
+    .replace("var VERSAO = '__VERSAO__';", `var VERSAO = '${VERSAO}';`)
+    .replace('var ARQUIVOS_SHELL = __ARQUIVOS__;', `var ARQUIVOS_SHELL = ${JSON.stringify(shell)};`);
+  if (sw.includes('__VERSAO__') || sw.includes('__ARQUIVOS__')) falhar('Não consegui preencher a versão no sw.js.');
   escrever('sw.js', sw);
   escrever('_headers', headers());
   escrever('.htaccess', htaccess());

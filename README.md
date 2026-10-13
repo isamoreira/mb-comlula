@@ -178,10 +178,12 @@ Todo dia:
    Escolha os 3 conteúdos (ex.: `2 5 9`), confirme a data, escreva variações de legenda se quiser, a missão do dia e responda `S` para gerar o `site.zip`.
 2. **Confira** (opcional, 30 s): `npm run dev` e abra http://localhost:8080.
 3. **Envie para a Hostinger** (1 min): hPanel → **Arquivos → Gerenciador de Arquivos** → abra `public_html` → **Upload** do `site.zip` → clique com o botão direito no `site.zip` → **Extrair** (na própria `public_html`, substituindo os arquivos) → apague o `site.zip` de lá.
+   ⚠ **Nunca apague os outros arquivos da `public_html`** (vídeos, fotos, ícones): o zip só traz o que falta ou mudou.
+4. **Confira** (10 s): `npm run conferir`. Ele verifica no site publicado se todos os arquivos estão lá (inclusive os vídeos) e se o contador responde. Se faltar algo, rode `npm run pacote` de novo: o zip já inclui o que estiver faltando.
 
 Pronto: o site já mostra os posts novos.
 
-O `site.zip` leva **só os arquivos novos ou alterados** desde o último pacote (vídeos de dias anteriores não são reenviados). Se um envio falhar ou a `public_html` for apagada, gere o site inteiro com `npm run pacote -- --completo`.
+O `npm run pacote` **confere o site no ar** antes de montar o zip: entra tudo o que estiver faltando no servidor (por exemplo, se alguém apagou a `public_html`) e tudo o que mudou. Vídeos que já estão lá não são reenviados. Para gerar o site inteiro sem conferir: `npm run pacote -- --completo`.
 
 **Dica:** prepare os posts de amanhã hoje à noite (com a data de amanhã). Eles ficam escondidos até o dia chegar, então dá para enviar o `site.zip` de uma vez.
 
@@ -245,7 +247,7 @@ Todos os links levam para a página do post (`/p/<id>/`), com UTM: `utm_source=<
 
 | Rede | O que acontece |
 |---|---|
-| WhatsApp | No celular: envia a **foto/vídeo** com a legenda e o link pela lista de apps (funciona também para postar no **Status**). Abaixo há a opção "só o texto com o link" (`wa.me`), útil para grupos. No computador: `wa.me` com legenda + hashtags + link. |
+| WhatsApp | Em "Enviar a foto/vídeo": envia o **arquivo** com a legenda e o link pela lista de apps do celular (dá para postar no **Status**). Em "Ou mande só o link": `wa.me` com legenda + hashtags + link, com prévia da imagem. |
 | Telegram | `t.me/share/url` com link e legenda. |
 | X | `twitter.com/intent/tweet` com legenda e link. Se passar de 280 caracteres, tira as hashtags e, se preciso, corta a legenda com "…". |
 | Threads | `threads.net/intent/post` com legenda + link (limite de 500 caracteres respeitado). |
@@ -254,7 +256,15 @@ Todos os links levam para a página do post (`/p/<id>/`), com UTM: `utm_source=<
 | Instagram, TikTok, Kwai | Não têm link de post pré-preenchido. No celular, a mídia é enviada pela **lista nativa de apps** (Web Share API) e a legenda já fica copiada. Onde isso não existe (ex.: computador), aparecem os passos "1. Baixe a mídia 2. Cole a legenda no app", com os botões. |
 | Mais apps do celular | Lista nativa com legenda + link (aparece quando o navegador suporta). |
 
-"Copiar legenda" e "Baixar mídia" também ficam disponíveis no card e no painel.
+### No celular: o painel "Compartilhar"
+
+1. **Enviar a foto/vídeo com a legenda** (WhatsApp, Instagram, TikTok, Kwai, Outro app): o site prepara o arquivo ("Preparando o vídeo… 40%") e, quando fica pronto, cada botão abre a lista de apps do celular já com o arquivo e a legenda. A legenda também fica copiada.
+2. **Ou mande só o link** (WhatsApp, Telegram, X, Threads, Facebook, Reddit).
+3. **Salvar no celular**: abre a lista do celular com o arquivo, onde aparece "Salvar vídeo"/"Salvar imagem", e o arquivo vai para a **Galeria** (no iPhone, o download comum iria para o app "Arquivos").
+
+**Aberto dentro do Instagram, Facebook, TikTok ou Kwai?** Esses apps abrem links num navegador interno que não deixa baixar nem enviar arquivos. O site percebe e mostra um aviso com o passo "Abrir no navegador" (no Android, um botão "Abrir no Chrome").
+
+"Copiar legenda" e "Salvar no celular" também ficam no card de cada post.
 
 ## 8. Testes
 

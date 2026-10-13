@@ -683,3 +683,31 @@ select.btn {
 .numeros__vazio {
   color: var(--muted);
 }
+
+/* ---------------- Painel: preparo do arquivo e botões em espera ---------------- */
+.rede--nativo .rede__marca { background: #555; }
+.painel__progresso {
+  margin: 0 0 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-weight: 700;
+}
+.painel__progresso--erro {
+  border-color: #c62828;
+}
+.rede--esperando {
+  opacity: 0.5;
+}
+/* No computador não há envio de arquivo: some a nota do celular. */
+.painel:not(.painel--celular) .painel__nota--celular {
+  display: none;
+}
+
+.aviso--app {
+  margin: 0 0 20px;
+}
+.aviso--app p {
+  margin: 0 0 10px;
+}

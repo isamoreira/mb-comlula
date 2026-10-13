@@ -116,6 +116,14 @@ teste('páginas principais existem', () => {
   );
 });
 
+teste('sw.js gerado é JavaScript válido, com versão e lista de arquivos preenchidas', () => {
+  const sw = fs.readFileSync(path.join(DIST, 'sw.js'), 'utf8');
+  assert.ok(!/__VERSAO__|__ARQUIVOS__/.test(sw), 'marcações não substituídas');
+  new (require('vm').Script)(sw); // erro de sintaxe = falha
+  const lista = JSON.parse(/var ARQUIVOS_SHELL = (\[.*?\]);/.exec(sw)[1]);
+  lista.forEach((u) => assert.ok(fs.existsSync(path.join(DIST, u.split('?')[0].replace(/\/$/, '/index.html'))), 'não existe: ' + u));
+});
+
 teste('nenhuma página carrega scripts ou estilos de terceiros', () => {
   const htmls = [];
   (function andar(d) {

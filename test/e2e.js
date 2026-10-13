@@ -179,8 +179,18 @@ async function teste(nome, fn) {
 
   await page.screenshot({ path: path.join(FOTOS, '04-painel-instagram-390.png') });
 
-  await teste('Instagram com Web Share API chama navigator.share com o arquivo', async () => {
-    const p2 = await novaPagina({ data: ultimoDia + 'T15:00:00Z' });
+  // Celular simulado: Web Share API com arquivos (navigator.share é registrado em window.__compartilhado).
+  async function paginaCelular(extra, { isolada = false } = {}) {
+    let p2;
+    if (isolada) {
+      // Janela anônima: sem o cache do service worker das páginas anteriores.
+      const ctx = await browser.createBrowserContext();
+      p2 = await ctx.newPage();
+      await p2.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+      await p2.evaluateOnNewDocument(fingirData(ultimoDia + 'T15:00:00Z'));
+    } else {
+      p2 = await novaPagina({ data: ultimoDia + 'T15:00:00Z' });
+    }
     await p2.evaluateOnNewDocument(() => {
       navigator.canShare = () => true;
       navigator.share = (d) => {
@@ -188,41 +198,94 @@ async function teste(nome, fn) {
         return Promise.resolve();
       };
     });
+    if (extra) await extra(p2);
     await p2.goto(BASE + '/', { waitUntil: 'networkidle0' });
+    return p2;
+  }
+  const esperarPronto = (p) => p.waitForFunction(() => /pront[oa]!/.test(document.querySelector('#painel [data-progresso]').textContent));
+
+  await teste('celular: painel mostra "Preparando…" e libera os botões quando o arquivo está pronto', async () => {
+    const p2 = await paginaCelular();
     await p2.click('.card [data-acao="compartilhar"]');
-    await new Promise((r) => setTimeout(r, 400)); // tempo de pré-carregar o arquivo
+    await esperarPronto(p2);
+    const desativados = await p2.$$eval('#painel [data-app][aria-disabled="true"]', (b) => b.length);
+    assert.strictEqual(desativados, 0);
+    assert.strictEqual(await p2.$eval('#painel [data-app="nativo"]', (b) => b.hidden), false, '"Outro app" deveria aparecer');
+    await new Promise((r) => setTimeout(r, 300));
+    await p2.screenshot({ path: path.join(FOTOS, '04b-painel-celular-390.png') });
+    await p2.close();
+  });
+
+  await teste('Instagram no celular envia o arquivo + legenda (sem link)', async () => {
+    const p2 = await paginaCelular();
+    await p2.click('.card [data-acao="compartilhar"]');
+    await esperarPronto(p2);
     await p2.click('#painel [data-app="instagram"]');
     await p2.waitForFunction(() => window.__compartilhado);
     const c = await p2.evaluate(() => window.__compartilhado);
     assert.strictEqual(c.arquivos.length, 1);
     assert.ok(c.arquivos[0].startsWith(doDia[0].id), c.arquivos[0]);
-    assert.ok(c.texto.length > 0);
+    assert.ok(c.texto.length > 0 && !c.texto.includes('utm_source'), c.texto);
     await p2.close();
   });
 
-  await teste('WhatsApp no celular manda o ARQUIVO (foto/vídeo) com legenda e link', async () => {
-    const p2 = await novaPagina({ data: ultimoDia + 'T15:00:00Z' });
-    await p2.evaluateOnNewDocument(() => {
-      navigator.canShare = () => true;
-      navigator.share = (d) => {
-        window.__compartilhado = { arquivos: (d.files || []).map((f) => f.name), texto: d.text };
-        return Promise.resolve();
-      };
-    });
-    await p2.goto(BASE + '/', { waitUntil: 'networkidle0' });
+  await teste('WhatsApp no celular envia o ARQUIVO com legenda e link (Status)', async () => {
+    const p2 = await paginaCelular();
     await p2.click('.card [data-acao="compartilhar"]');
-    await new Promise((r) => setTimeout(r, 400));
-    await p2.click('#painel a[data-rede="whatsapp"]:not([data-so-link])');
+    await esperarPronto(p2);
+    await p2.click('#painel [data-app="whatsapp"]');
     await p2.waitForFunction(() => window.__compartilhado);
     const c = await p2.evaluate(() => window.__compartilhado);
     assert.strictEqual(c.arquivos.length, 1);
     assert.ok(c.texto.includes('utm_source=whatsapp'), c.texto);
-    assert.strictEqual(p2.target().browserContext().targets().filter((t) => /wa\.me/.test(t.url())).length, 0, 'não deveria abrir wa.me');
-    // O link "só texto" continua sendo o wa.me.
-    const soLink = await p2.$eval('#painel a[data-so-link]', (a) => a.href);
+    // "Ou mande só o link" continua sendo o wa.me.
+    const soLink = await p2.$eval('#painel a[data-rede="whatsapp"]', (a) => a.href);
     assert.ok(soLink.startsWith('https://wa.me/?text='));
     await p2.close();
   });
+
+  await teste('"Salvar no celular" abre a lista com SÓ o arquivo (para "Salvar vídeo/imagem")', async () => {
+    const p2 = await paginaCelular();
+    await p2.click('.card [data-acao="baixar"]'); // 1º toque: começa a preparar
+    await p2.waitForFunction(() => /Toque em "Salvar no celular" de novo|Escolha "Salvar/.test(document.getElementById('toast').textContent) || window.__compartilhado);
+    const jaFoi = await p2.evaluate(() => !!window.__compartilhado);
+    if (!jaFoi) await p2.click('.card [data-acao="baixar"]'); // 2º toque: arquivo pronto
+    await p2.waitForFunction(() => window.__compartilhado);
+    const c = await p2.evaluate(() => window.__compartilhado);
+    assert.strictEqual(c.arquivos.length, 1);
+    assert.strictEqual(c.texto, undefined);
+    await p2.close();
+  });
+
+  await teste('mídia faltando no servidor: avisa e sugere mandar o link', async () => {
+    const p2 = await paginaCelular(async (p) => {
+      await p.setBypassServiceWorker(true); // o service worker buscaria a mídia sem passar pela simulação
+      await p.setRequestInterception(true);
+      // Simula vídeos/fotos apagados do servidor (as thumbs continuam lá).
+      p.on('request', (r) => {
+        const caminho = new URL(r.url()).pathname;
+        const midia = caminho.startsWith('/media/') && !caminho.includes('-thumb');
+        return midia ? r.respond({ status: 404, body: 'x' }) : r.continue();
+      });
+    }, { isolada: true });
+    await p2.click('.card [data-acao="compartilhar"]');
+    await p2.waitForFunction(() => /Não foi possível/.test(document.querySelector('#painel [data-progresso]').textContent));
+    await p2.close();
+  });
+
+  await teste('aberto dentro do Instagram: aviso "Abrir no navegador"', async () => {
+    const p2 = await novaPagina({ data: ultimoDia + 'T15:00:00Z' });
+    await p2.setUserAgent('Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36 Instagram 300.0');
+    await p2.goto(BASE + '/', { waitUntil: 'networkidle0' });
+    const t = await p2.$eval('.aviso--app', (e) => e.textContent);
+    assert.ok(/Abrir no navegador/.test(t) && /Instagram/.test(t), t);
+    const href = await p2.$eval('.aviso--app a', (a) => a.getAttribute('href'));
+    assert.ok(href.startsWith('intent://') && href.includes('package=com.android.chrome'), href);
+    await p2.screenshot({ path: path.join(FOTOS, '04c-aviso-instagram-390.png') });
+    await p2.close();
+  });
+
+  await teste('navegador normal: sem aviso de app', async () => assert.strictEqual(await page.$('.aviso--app'), null));
 
   await teste('sem erros no console', async () => assert.deepStrictEqual(page.erros, []));
 
