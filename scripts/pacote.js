@@ -52,9 +52,39 @@ if (!fs.existsSync(path.join(DIST, 'index.html'))) {
 // Sem o domínio certo, as prévias dos links no WhatsApp/Facebook ficariam quebradas.
 const ogUrl = (/og:url" content="([^"]*)"/.exec(fs.readFileSync(path.join(DIST, 'index.html'), 'utf8')) || [])[1] || '';
 if (/localhost|podeespalhar\.com\.br/.test(ogUrl)) {
-  console.error(`\n✖ O endereço do site está como "${ogUrl}".`);
-  console.error('  Preencha "site_url" em data/config.json com o domínio do Espalha Hoje (ex.: https://espalhahoje.com.br) e rode de novo.\n');
-  process.exit(1);
+  console.log(`\nAinda não sei o endereço do Espalha Hoje (está como "${ogUrl}").`);
+  console.log('Ele aparece no hPanel da Hostinger, em "Sites", depois que o site é criado.');
+  console.log('Exemplo: https://palavra-aleatoria.hostingersite.com\n');
+  if (!process.stdin.isTTY) {
+    console.error('✖ Preencha "site_url" em data/config.json e rode de novo.\n');
+    process.exit(1);
+  }
+  perguntarEndereco();
+  return; // o resto roda de novo depois que o endereço for salvo
+}
+
+// Pergunta o endereço, salva em data/config.json, refaz o build e o pacote.
+async function perguntarEndereco() {
+  const readline = require('readline/promises');
+  const { spawnSync } = require('child_process');
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  let url;
+  for (;;) {
+    url = (await rl.question('Cole aqui o endereço do site: ')).trim().replace(/\/+$/, '');
+    if (!/^https?:\/\//i.test(url) && /^[\w.-]+\.[a-z]{2,}(\/.*)?$/i.test(url)) url = 'https://' + url;
+    if (/^https?:\/\/[\w.-]+\.[a-z]{2,}/i.test(url) && !/podeespalhar\.com\.br/i.test(url)) break;
+    console.log('  → Endereço inválido. Copie do hPanel, ex.: https://palavra-aleatoria.hostingersite.com');
+  }
+  rl.close();
+  const arqConfig = path.join(RAIZ, 'data/config.json');
+  const config = JSON.parse(fs.readFileSync(arqConfig, 'utf8'));
+  config.site_url = url;
+  fs.writeFileSync(arqConfig, JSON.stringify(config, null, 2) + '\n');
+  console.log(`✔ Endereço salvo em data/config.json: ${url}\n`);
+  const b = spawnSync(process.execPath, [path.join(RAIZ, 'build.js')], { stdio: 'inherit' });
+  if (b.status !== 0) process.exit(b.status || 1);
+  const p = spawnSync(process.execPath, [__filename, ...process.argv.slice(2)], { stdio: 'inherit' });
+  process.exit(p.status || 0);
 }
 
 // Só os arquivos novos ou alterados desde o último pacote (vídeos antigos não são reenviados).

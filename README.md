@@ -191,16 +191,16 @@ O `site.zip` leva **só os arquivos novos ou alterados** desde o último pacote 
 
 ### Antes de tudo
 
-Preencha `site_url` em `data/config.json` com o domínio do Espalha Hoje (ex.: `https://espalhahoje.com.br`). Ele é usado nas prévias dos links no WhatsApp/Facebook. O `npm run pacote` se recusa a gerar o zip enquanto ele estiver vazio.
+O site precisa saber o próprio endereço (usado nas prévias dos links no WhatsApp/Facebook). Não é preciso comprar domínio: serve o endereço gratuito que a Hostinger dá ao site (algo como `https://palavra-aleatoria.hostingersite.com`, visível no hPanel em **Sites**). Na primeira vez que você rodar `npm run pacote`, ele pergunta esse endereço e guarda em `site_url` (`data/config.json`). Se um dia trocar de endereço, edite esse campo.
 
 ### Hostinger
 
 **Primeira vez:**
 
-1. No hPanel, confirme que o domínio do Espalha Hoje está apontado para a hospedagem.
-2. Em **Segurança → SSL**, ative o certificado SSL (gratuito) do domínio. O site exige HTTPS: sem ele, "Copiar legenda" e a lista de apps do celular não funcionam. O `.htaccess` já redireciona `http://` para `https://`.
+1. No hPanel, crie o site (pode usar o domínio temporário/gratuito que a Hostinger oferece) e copie o endereço dele.
+2. Confira em **Segurança → SSL** se o certificado SSL (gratuito) está ativo para esse endereço. O site exige HTTPS: sem ele, "Copiar legenda" e a lista de apps do celular não funcionam. O `.htaccess` já redireciona `http://` para `https://`.
 3. No **Gerenciador de Arquivos**, apague o que houver em `public_html` (por exemplo, o `default.php` de boas-vindas da Hostinger).
-4. Rode `npm run pacote`, envie o `site.zip` para `public_html` e extraia (passo 5 da seção anterior).
+4. Rode `npm run pacote` (na primeira vez ele pede o endereço do passo 1), envie o `site.zip` para `public_html` e extraia (passo 3 da seção anterior).
 5. Abra o site no celular e teste o "Compartilhar".
 
 O build gera um `.htaccess` (configuração do servidor Apache/LiteSpeed da Hostinger) com: página de erro 404, redirecionamento para HTTPS, a Content-Security-Policy (bloqueia scripts de terceiros), cache certo para `sw.js`/`posts.json` e `noindex` no `/admin-stats/`. Ele é um arquivo "oculto" (começa com ponto): o `site.zip` já o inclui. Se enviar os arquivos por FTP, confira se o `.htaccess` foi junto.
