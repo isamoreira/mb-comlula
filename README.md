@@ -21,6 +21,7 @@ Página simples, pensada para celular, onde voluntários veem **só os conteúdo
 8. [Testes](#8-testes)
 9. [Privacidade e conformidade](#9-privacidade-e-conformidade)
 10. [Problemas comuns](#10-problemas-comuns)
+11. [Fase 2: contador anônimo de compartilhamentos](#11-fase-2-contador-anônimo-de-compartilhamentos)
 
 ---
 
@@ -59,9 +60,14 @@ Atalho: `npm start` faz o build e já abre o servidor.
 │   ├── js/app.js            # cards, painel de compartilhar, cópia, Web Share API
 │   ├── js/share.js          # monta as URLs de cada rede (com UTM)
 │   └── sw.js                # service worker (PWA / offline)
+├── worker/                  # fase 2: contador (Cloudflare Worker + D1)
+│   ├── src/index.js
+│   ├── schema.sql
+│   └── wrangler.toml
 ├── test/
 │   ├── smoke.js             # testes rápidos (URLs e meta tags)
-│   └── e2e.js               # teste no Chrome em tela de celular (390px)
+│   ├── e2e.js               # teste no Chrome em tela de celular (390px)
+│   └── contador.mjs         # testes da fase 2
 └── dist/                    # site pronto (gerado; não edite)
 ```
 
@@ -73,6 +79,7 @@ Páginas geradas:
 | `/p/<id>/` | Um post. Tem as meta tags Open Graph/Twitter Card para a prévia bonita no WhatsApp, Facebook e X. É o link que vai nos compartilhamentos. |
 | `/arquivo/` | Dias anteriores (link discreto no rodapé). |
 | `/privacidade/` | Explica que o site não coleta dados pessoais. |
+| `/admin-stats/` | Painel de compartilhamentos (fase 2, protegido por token). |
 
 ## 3. Configuração (`data/config.json`)
 
@@ -220,6 +227,7 @@ Todos os links levam para a página do post (`/p/<id>/`), com UTM: `utm_source=<
 npm run build
 npm test            # URLs de cada rede e meta tags OG das páginas /p/<id>/
 npm run test:e2e    # abre o site no Chrome em tela de 390px e testa tudo
+npm run test:contador  # fase 2: Worker + contador + /admin-stats/ (refaz o dist/ no final)
 ```
 
 O teste e2e usa o Chrome ou Edge instalado (se não achar, defina `CHROME_PATH`). Ele verifica: posts do dia, aviso de dia anterior, posts futuros escondidos, botões ≥ 48px, ausência de rolagem horizontal, "Trocar legenda", "Copiar legenda", URL de cada rede, fallback do Instagram, Web Share com arquivo, modo escuro, meta tags OG e as páginas de arquivo/privacidade. As capturas de tela ficam em `test/screenshots/`.
@@ -239,3 +247,72 @@ Para conferir a prévia real depois do deploy: [Facebook Sharing Debugger](https
 - **"Copiar" não funciona no celular em teste local:** é a exigência de HTTPS (veja a seção 1).
 - **Mudei o site mas o celular mostra a versão antiga:** o app instalado atualiza sozinho na próxima abertura (o service worker busca a nova versão). Feche e abra de novo.
 - **Erro no build:** leia a mensagem — ela indica o post e o campo com problema.
+
+## 11. Fase 2: contador anônimo de compartilhamentos
+
+Quando ativado:
+
+- cada toque em uma rede envia ao contador **só** `{ postId, network }`, sem IP, cookie ou identificador;
+- o próprio aparelho guarda (no `localStorage`) quais post/rede já foram contados, então cada aparelho conta **1 vez por post e por rede**;
+- a página inicial mostra "X pessoas já compartilharam hoje" (a partir de 1);
+- o painel `/admin-stats/#token=SEU_TOKEN` mostra os compartilhamentos por rede, por post e por dia.
+
+O contador é um **Cloudflare Worker** com banco **D1** (código em `worker/`). Ele funciona com o site hospedado tanto no Cloudflare Pages quanto no Netlify.
+
+> **Por que D1 e não KV?** O plano gratuito do Workers KV aceita só 1.000 gravações por dia e não tem incremento atômico (cliques simultâneos se perdem). O D1 gratuito aceita 100 mil gravações por dia e soma `n = n + 1` de forma atômica. Os dois são da Cloudflare e o custo é zero nesse volume.
+
+### Como ativar (≈10 minutos, uma vez só)
+
+Precisa de uma conta gratuita na Cloudflare.
+
+```bash
+cd worker
+npx wrangler login                              # abre o navegador para autorizar
+npx wrangler d1 create espalha-hoje             # mostra um "database_id"
+```
+
+1. Copie o `database_id` para `worker/wrangler.toml` (no lugar de `COLE-AQUI-O-ID-DO-BANCO`).
+2. Em `worker/wrangler.toml`, troque `ALLOWED_ORIGIN = "*"` pelo endereço do site (ex.: `"https://espalha-hoje.pages.dev"`).
+3. Crie a tabela e publique:
+
+   ```bash
+   npx wrangler d1 execute espalha-hoje --remote --file=schema.sql
+   npx wrangler secret put ADMIN_TOKEN            # digite um token longo e difícil (ex.: 32 caracteres aleatórios)
+   npx wrangler deploy                            # mostra o endereço: https://espalha-hoje-contador.<sua-conta>.workers.dev
+   ```
+
+4. Coloque esse endereço em `data/config.json`:
+
+   ```json
+   "counter_endpoint": "https://espalha-hoje-contador.<sua-conta>.workers.dev"
+   ```
+
+   (ou defina a variável de ambiente `COUNTER_ENDPOINT` no painel da hospedagem).
+5. Rode `npm run build` e publique o site. O build libera esse endereço na Content-Security-Policy automaticamente.
+6. Acesse `https://seu-site/admin-stats/#token=SEU_TOKEN`.
+
+O token é conferido pelo Worker (lido do segredo `ADMIN_TOKEN`); ele nunca fica no código do site. Use `#token=` (e não `?token=`), assim ele não aparece em logs de servidor. Para trocar o token, rode `npx wrangler secret put ADMIN_TOKEN` de novo.
+
+### Testar o Worker no computador
+
+```bash
+cd worker
+npx wrangler d1 execute espalha-hoje --local --file=schema.sql
+npx wrangler dev                                 # Worker local em http://localhost:8787
+```
+
+Em outro terminal, na raiz do projeto: `COUNTER_ENDPOINT=http://localhost:8787 npm run build && npm run dev` (no PowerShell: `$env:COUNTER_ENDPOINT="http://localhost:8787"; npm run build; npm run dev`). Para o painel local, crie `worker/.dev.vars` com a linha `ADMIN_TOKEN=um-token-de-teste`.
+
+### Rotas do Worker
+
+| Rota | Uso |
+|---|---|
+| `POST /hit` | Corpo `{"postId":"2026-10-14-01","network":"whatsapp"}`. Soma 1. Redes aceitas: whatsapp, telegram, x, threads, facebook, reddit, instagram, tiktok, kwai, nativo. |
+| `GET /today` | `{"day":"2026-10-14","total":123}`. Cache de 60 s na Cloudflare para poupar o banco. |
+| `GET /stats?days=7` | Exige `Authorization: Bearer <ADMIN_TOKEN>`. Totais por rede, por post e por dia. |
+
+### Limites (para saber o que esperar)
+
+- **"pessoas" na frase da página inicial é uma aproximação:** o número soma compartilhamentos (1 por post/rede/aparelho). Quem compartilha 3 posts em 2 redes conta 6.
+- **É possível inflar o contador** de propósito (limpando o navegador ou chamando o `/hit` direto). Sem identificar pessoas, isso não tem como ser evitado 100%. Use o número como termômetro, não como dado exato.
+- A Cloudflare, como qualquer servidor, recebe o IP na conexão. O Worker não lê nem grava esse IP, e os logs ficam desligados (`[observability] enabled = false`).

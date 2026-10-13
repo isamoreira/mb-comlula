@@ -36,6 +36,8 @@ const posts = lerJson('data/posts.json');
 // Prioridade: variável SITE_URL > data/config.json > URL automática do Netlify > localhost.
 const SITE_URL = String(process.env.SITE_URL || config.site_url || process.env.URL || 'http://localhost:8080').replace(/\/+$/, '');
 const VERSAO = Date.now().toString(36);
+// Endereço do contador (fase 2). A variável COUNTER_ENDPOINT tem prioridade sobre o config.
+const CONTADOR = String(process.env.COUNTER_ENDPOINT || config.counter_endpoint || '').replace(/\/+$/, '');
 const COR = /^#[0-9a-f]{6}$/i.test(config.primary_color || '') ? config.primary_color : '#C4122F';
 
 function validarPosts() {
@@ -176,7 +178,7 @@ const NOME = config.project_name || 'Espalha Hoje';
 const CONFIG_PUBLICA = {
   project_name: NOME,
   default_credit: config.default_credit || '',
-  counter_endpoint: config.counter_endpoint || '',
+  counter_endpoint: CONTADOR,
 };
 
 let LOGO_PUBLICO = 'assets/logo.svg';
@@ -196,6 +198,7 @@ ${noindex ? '<meta name="robots" content="noindex, nofollow">' : `<link rel="can
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/${LOGO_PUBLICO}">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="${esc(NOME)}">
 <meta property="og:type" content="${tipo}">
@@ -304,7 +307,7 @@ function scriptsHtml(extra = '') {
 <script type="application/json" id="eh-config">${jsonSeguro(CONFIG_PUBLICA)}</script>
 ${extra}
 <script src="/js/share.js?v=${VERSAO}" defer></script>
-<script src="/js/app.js?v=${VERSAO}" defer></script>`;
+${CONTADOR ? `<script src="/js/contador.js?v=${VERSAO}" defer></script>\n` : ''}<script src="/js/app.js?v=${VERSAO}" defer></script>`;
 }
 
 function paginaHome({ canonical }) {
@@ -416,6 +419,28 @@ ${config.footer_identification ? `<h2>Responsável</h2><p class="rodape__ident">
   });
 }
 
+// Painel de estatísticas (fase 2). O token é conferido pelo Worker, nunca pelo site.
+function paginaAdmin() {
+  return paginaTexto({
+    pagina: 'admin',
+    titulo: 'Estatísticas',
+    descricao: 'Painel de compartilhamentos.',
+    canonical: urlAbs('admin-stats/'),
+    noindex: true,
+    corpo: `<h1>Compartilhamentos</h1>
+<p><label for="stats-dias">Período: </label>
+<select id="stats-dias" class="btn btn--ghost">
+  <option value="1">Hoje</option>
+  <option value="7" selected>Últimos 7 dias</option>
+  <option value="30">Últimos 30 dias</option>
+  <option value="90">Últimos 90 dias</option>
+</select></p>
+<div id="stats" aria-live="polite" aria-busy="true"><p class="carregando">Carregando…</p></div>
+<p class="painel__nota">Contagem anônima: 1 por post/rede/aparelho. Sem IP, cookie ou identificador.</p>`,
+    extraScripts: `<script src="/js/admin-stats.js?v=${VERSAO}" defer></script>`,
+  });
+}
+
 function pagina404() {
   return paginaTexto({
     pagina: '404',
@@ -471,9 +496,9 @@ function manifest(temIcones) {
 function headers() {
   // Content-Security-Policy: só recursos do próprio site (+ endpoint do contador, se houver).
   let conexoes = "'self'";
-  if (config.counter_endpoint) {
+  if (CONTADOR) {
     try {
-      conexoes += ' ' + new URL(config.counter_endpoint).origin;
+      conexoes += ' ' + new URL(CONTADOR).origin;
     } catch (e) {
       falhar('"counter_endpoint" em data/config.json não é uma URL válida.');
     }
@@ -580,6 +605,7 @@ async function main() {
   escrever('arquivo/index.html', paginaArquivo());
   escrever('privacidade/index.html', paginaPrivacidade());
   escrever('404.html', pagina404());
+  escrever('admin-stats/index.html', paginaAdmin());
 
   // PWA e configuração de hospedagem.
   escrever('manifest.webmanifest', manifest(temIcones));
@@ -591,6 +617,7 @@ async function main() {
     `/css/theme.css?v=${VERSAO}`,
     `/js/share.js?v=${VERSAO}`,
     `/js/app.js?v=${VERSAO}`,
+    ...(CONTADOR ? [`/js/contador.js?v=${VERSAO}`] : []),
     '/data/posts.json',
     '/manifest.webmanifest',
     '/' + LOGO_PUBLICO,
@@ -606,6 +633,7 @@ async function main() {
   const dias = new Set(publicos.map((p) => p.date)).size;
   console.log(`✔ Build concluído em ${Date.now() - inicio} ms → dist/`);
   console.log(`  ${publicos.length} posts, ${dias} dia(s). Endereço público: ${SITE_URL}`);
+  console.log(CONTADOR ? `  Contador ativado: ${CONTADOR}` : '  Contador desativado (fase 2: preencha "counter_endpoint").');
   if (/espalha-hoje\.pages\.dev/.test(SITE_URL)) {
     console.log('  Dica: ajuste "site_url" em data/config.json (ou a variável SITE_URL) para o endereço real do site.');
   }

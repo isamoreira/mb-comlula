@@ -10,7 +10,8 @@
     "novo-post": "node scripts/novo-post.js",
     "exemplos": "node scripts/gerar-exemplos.js",
     "test": "node test/smoke.js",
-    "test:e2e": "node test/e2e.js"
+    "test:e2e": "node test/e2e.js",
+    "test:contador": "node test/contador.mjs"
   },
   "engines": {
     "node": ">=18"

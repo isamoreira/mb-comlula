@@ -564,3 +564,41 @@ main {
   align-items: center;
   min-height: var(--toque);
 }
+
+/* ---------------- Painel de estatísticas (fase 2) ---------------- */
+.stats-total {
+  font-size: 1.2rem;
+}
+.tabela-rolagem {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+th,
+td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+thead th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+tbody th {
+  font-weight: 600;
+}
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+select.btn {
+  appearance: auto;
+}

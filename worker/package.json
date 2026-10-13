@@ -1,0 +1,9 @@
+{
+  "name": "espalha-hoje-contador",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  }
+}

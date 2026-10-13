@@ -1,0 +1,22 @@
+# Worker do contador anônimo do Espalha Hoje.
+# Passo a passo no README (seção "Fase 2").
+name = "espalha-hoje-contador"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+# Sem logs persistentes: nada de requisições guardadas.
+[observability]
+enabled = false
+
+[vars]
+# Endereço do site que pode ler o contador (ex.: "https://espalha-hoje.pages.dev"). "*" = qualquer um.
+ALLOWED_ORIGIN = "*"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "espalha-hoje"
+# Cole aqui o "database_id" mostrado por: npx wrangler d1 create espalha-hoje
+database_id = "COLE-AQUI-O-ID-DO-BANCO"
+
+# O token do painel /admin-stats/ NÃO fica aqui. Cadastre como segredo:
+#   npx wrangler secret put ADMIN_TOKEN
