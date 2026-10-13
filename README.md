@@ -44,6 +44,8 @@ Atalho: `npm start` faz o build e já abre o servidor.
 
 ## 2. Estrutura de pastas
 
+> **As mídias (`/media`) não vão para o GitHub**: ficam no seu computador e na Hostinger (e podem ser baixadas de novo do Pode Espalhar com `npm run importar`). Quem clonar o repositório recebe o código e a lista de posts; para gerar o site, precisa importar as mídias de novo.
+
 ```
 ├── build.js                 # gera o site em /dist a partir de /data e /media
 ├── dev.js                   # servidor local (npm run dev)
