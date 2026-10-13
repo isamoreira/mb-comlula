@@ -252,6 +252,7 @@ function rodapeHtml({ creditos = '' } = {}) {
   <nav class="rodape__links" aria-label="Links do rodapé">
     <a href="/">Conteúdos de hoje</a>
     <a href="/arquivo/">Dias anteriores</a>
+    ${CONTADOR ? '<a href="/numeros/">Veja os números</a>' : ''}
     <a href="/privacidade/">Privacidade</a>
   </nav>
 </div></footer>`;
@@ -422,7 +423,7 @@ function paginaPrivacidade() {
 <h1>Privacidade</h1>
 <p><strong>Este site não coleta dados pessoais.</strong> Não há login, cadastro, formulários, cookies, Google Analytics ou qualquer rastreador de terceiros.</p>
 <h2>O que é contado</h2>
-<p>Quando a contagem está ativada, registramos apenas <strong>quantas vezes</strong> cada conteúdo foi compartilhado e em qual rede social (por exemplo: "post X, WhatsApp, +1"). Não registramos endereço IP, identificador do aparelho, localização nem qualquer informação sobre quem compartilhou.</p>
+<p>Quando a contagem está ativada, registramos apenas <strong>quantas vezes</strong> cada conteúdo foi compartilhado e em qual rede social (por exemplo: "post X, WhatsApp, +1"). Não registramos endereço IP, identificador do aparelho, localização nem qualquer informação sobre quem compartilhou. Os totais ficam públicos na página <a href="/numeros/">Veja os números</a>.</p>
 <p>Para evitar contar duas vezes o mesmo compartilhamento, o seu navegador guarda localmente (no próprio aparelho, sem enviar a ninguém) uma marcação do tipo "este post já foi contado nesta rede". Você pode apagá-la limpando os dados do site no navegador.</p>
 <h2>Redes sociais</h2>
 <p>Ao tocar em uma rede social, você é levado ao site ou app daquela rede, que tem a própria política de privacidade. Os links levam um parâmetro de campanha (UTM) que indica apenas a rede e a data do conteúdo.</p>
@@ -432,25 +433,25 @@ ${config.footer_identification ? `<h2>Responsável</h2><p class="rodape__ident">
   });
 }
 
-// Painel de estatísticas (fase 2). O token é conferido pelo Worker, nunca pelo site.
-function paginaAdmin() {
+// Página pública "Veja os números" (compartilhamentos por rede, por post e por dia).
+function paginaNumeros() {
   return paginaTexto({
-    pagina: 'admin',
-    titulo: 'Estatísticas',
-    descricao: 'Painel de compartilhamentos.',
-    canonical: urlAbs('admin-stats/'),
-    noindex: true,
-    corpo: `<h1>Compartilhamentos</h1>
-<p><label for="stats-dias">Período: </label>
-<select id="stats-dias" class="btn btn--ghost">
+    pagina: 'numeros',
+    titulo: 'Veja os números',
+    descricao: 'Quantas vezes os conteúdos foram compartilhados, e em quais redes.',
+    canonical: urlAbs('numeros/'),
+    corpo: `<p><a class="voltar" href="/">← Voltar para hoje</a></p>
+<h1>Veja os números</h1>
+<p><label for="numeros-dias">Período: </label>
+<select id="numeros-dias" class="btn btn--ghost">
   <option value="1">Hoje</option>
   <option value="7" selected>Últimos 7 dias</option>
   <option value="30">Últimos 30 dias</option>
   <option value="90">Últimos 90 dias</option>
 </select></p>
-<div id="stats" aria-live="polite" aria-busy="true"><p class="carregando">Carregando…</p></div>
-<p class="painel__nota">Contagem anônima: 1 por post/rede/aparelho. Sem IP, cookie ou identificador.</p>`,
-    extraScripts: `<script src="/js/admin-stats.js?v=${VERSAO}" defer></script>`,
+<div id="numeros" aria-live="polite" aria-busy="true"><p class="carregando">Carregando…</p></div>
+<p class="painel__nota">Cada toque em uma rede conta 1 vez por post, por rede e por celular. Contagem anônima: sem IP, cookie ou cadastro.</p>`,
+    extraScripts: `<script src="/js/numeros.js?v=${VERSAO}" defer></script>`,
   });
 }
 
@@ -509,7 +510,8 @@ function manifest(temIcones) {
 function headers() {
   // Content-Security-Policy: só recursos do próprio site (+ endpoint do contador, se houver).
   let conexoes = "'self'";
-  if (CONTADOR) {
+  // Endereço relativo (ex.: "/api/contador.php") já é coberto por 'self'.
+  if (CONTADOR && !CONTADOR.startsWith('/')) {
     try {
       conexoes += ' ' + new URL(CONTADOR).origin;
     } catch (e) {
@@ -542,10 +544,6 @@ function headers() {
 
 /data/*
   Cache-Control: no-cache
-
-/admin-stats/*
-  X-Robots-Tag: noindex, nofollow
-  Cache-Control: no-store
 `;
 }
 
@@ -605,6 +603,7 @@ async function main() {
   // Arquivos estáticos e mídias.
   copiarPasta(path.join(SRC, 'css'), path.join(DIST, 'css'));
   copiarPasta(path.join(SRC, 'js'), path.join(DIST, 'js'));
+  copiarPasta(path.join(SRC, 'api'), path.join(DIST, 'api')); // contador (PHP, roda na Hostinger)
   copiarPasta(path.join(BASE, 'media'), path.join(DIST, 'media'));
   escrever('css/theme.css', temaCss());
 
@@ -660,7 +659,7 @@ async function main() {
   escrever('arquivo/index.html', paginaArquivo());
   escrever('privacidade/index.html', paginaPrivacidade());
   escrever('404.html', pagina404());
-  escrever('admin-stats/index.html', paginaAdmin());
+  escrever('numeros/index.html', paginaNumeros());
 
   // PWA e configuração de hospedagem.
   escrever('manifest.webmanifest', manifest(temIcones));
@@ -684,21 +683,12 @@ async function main() {
   escrever('sw.js', sw);
   escrever('_headers', headers());
   escrever('.htaccess', htaccess());
-  // Painel de estatísticas: fora dos buscadores e sem cache (Apache/LiteSpeed).
-  escrever(
-    'admin-stats/.htaccess',
-    `<IfModule mod_headers.c>
-  Header always set X-Robots-Tag "noindex, nofollow"
-  Header always set Cache-Control "no-store"
-</IfModule>
-`
-  );
-  escrever('robots.txt', 'User-agent: *\nDisallow: /admin-stats/\n');
+  escrever('robots.txt', 'User-agent: *\nDisallow: /api/\n');
 
   const dias = new Set(publicos.map((p) => p.date)).size;
   console.log(`✔ Build concluído em ${Date.now() - inicio} ms → ${path.basename(DIST)}/${EXEMPLO ? ' (posts de exemplo, só para testes)' : ''}`);
   console.log(`  ${publicos.length} posts, ${dias} dia(s). Endereço público: ${SITE_URL}`);
-  console.log(CONTADOR ? `  Contador ativado: ${CONTADOR}` : '  Contador desativado (fase 2: preencha "counter_endpoint").');
+  console.log(CONTADOR ? `  Contador ativado: ${CONTADOR}` : '  Contador desativado (preencha "counter_endpoint" em data/config.json).');
   if (!publicos.length) console.log('  Nenhum post ainda: adicione com "npm run novo-post".');
   if (/espalha-hoje\.pages\.dev/.test(SITE_URL)) {
     console.log('  Dica: ajuste "site_url" em data/config.json (ou a variável SITE_URL) para o endereço real do site.');

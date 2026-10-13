@@ -1,4 +1,4 @@
-// Fase 2: contador anônimo de compartilhamentos.
+// Contador anônimo de compartilhamentos (api/contador.php, na própria Hostinger).
 // Só é carregado quando "counter_endpoint" está preenchido em data/config.json.
 // Envia apenas { postId, network }. Sem cookie, sem IP guardado, sem identificador.
 // Para não contar duas vezes, guarda no próprio aparelho (localStorage) quais post/rede já foram contados.
@@ -9,8 +9,12 @@
   try {
     config = JSON.parse(document.getElementById('eh-config').textContent);
   } catch (e) {}
-  var base = String(config.counter_endpoint || '').replace(/\/+$/, '');
+  var base = String(config.counter_endpoint || '');
   if (!base) return;
+
+  function rota(acao) {
+    return base + (base.indexOf('?') === -1 ? '?' : '&') + 'acao=' + acao;
+  }
 
   function jaContado(chave) {
     try {
@@ -30,15 +34,14 @@
 
     var corpo = JSON.stringify({ postId: d.postId, network: d.rede });
     // sendBeacon continua enviando mesmo se a pessoa sair da página (ex.: abrir o WhatsApp).
-    // "text/plain" evita a requisição prévia de CORS.
     var enviado = false;
     if (navigator.sendBeacon) {
       try {
-        enviado = navigator.sendBeacon(base + '/hit', new Blob([corpo], { type: 'text/plain' }));
+        enviado = navigator.sendBeacon(rota('hit'), new Blob([corpo], { type: 'text/plain' }));
       } catch (e) {}
     }
     if (!enviado) {
-      fetch(base + '/hit', { method: 'POST', body: corpo, keepalive: true, mode: 'no-cors', credentials: 'omit' }).catch(function () {});
+      fetch(rota('hit'), { method: 'POST', body: corpo, keepalive: true, credentials: 'omit' }).catch(function () {});
     }
   });
 
@@ -47,14 +50,18 @@
     var d = ev.detail || {};
     var el = document.getElementById('contador');
     if (!el || d.dia !== d.hoje) return;
-    fetch(base + '/today', { credentials: 'omit', cache: 'no-cache' })
+    fetch(rota('hoje'), { credentials: 'omit', cache: 'no-store' })
       .then(function (r) {
         return r.ok ? r.json() : null;
       })
       .then(function (dados) {
         if (!dados || !(dados.total > 0)) return;
         var n = new Intl.NumberFormat('pt-BR').format(dados.total);
-        el.textContent = dados.total === 1 ? '1 pessoa já compartilhou hoje' : n + ' pessoas já compartilharam hoje';
+        el.textContent = (dados.total === 1 ? '1 pessoa já compartilhou hoje' : n + ' pessoas já compartilharam hoje') + ' · ';
+        var a = document.createElement('a');
+        a.href = '/numeros/';
+        a.textContent = 'veja os números';
+        el.appendChild(a);
         el.hidden = false;
       })
       .catch(function () {});

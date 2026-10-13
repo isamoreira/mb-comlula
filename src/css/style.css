@@ -610,3 +610,76 @@ tbody th {
 select.btn {
   appearance: auto;
 }
+
+/* ---------------- Página "Veja os números" ---------------- */
+.numeros__destaques {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 16px 0 8px;
+}
+.destaque {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.destaque strong {
+  display: block;
+  font-size: 2rem;
+  line-height: 1.1;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-color-scheme: dark) {
+  .destaque strong {
+    color: var(--text);
+  }
+}
+.destaque span {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.barras {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.barras li {
+  padding: 8px 0;
+}
+.barras__linha {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.barras__linha strong {
+  font-variant-numeric: tabular-nums;
+}
+.barras progress {
+  display: block;
+  width: 100%;
+  height: 10px;
+  border: 0;
+  border-radius: 5px;
+  background: var(--border);
+  overflow: hidden;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.barras progress::-webkit-progress-bar {
+  background: var(--border);
+  border-radius: 5px;
+}
+.barras progress::-webkit-progress-value {
+  background: var(--primary);
+  border-radius: 5px;
+}
+.barras progress::-moz-progress-bar {
+  background: var(--primary);
+  border-radius: 5px;
+}
+.numeros__vazio {
+  color: var(--muted);
+}

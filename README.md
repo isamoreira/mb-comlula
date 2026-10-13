@@ -22,7 +22,7 @@ Página simples, pensada para celular, onde voluntários veem **só os conteúdo
 8. [Testes](#8-testes)
 9. [Privacidade e conformidade](#9-privacidade-e-conformidade)
 10. [Problemas comuns](#10-problemas-comuns)
-11. [Fase 2: contador anônimo de compartilhamentos](#11-fase-2-contador-anônimo-de-compartilhamentos)
+11. [Contador de compartilhamentos e "Veja os números"](#11-contador-de-compartilhamentos-e-veja-os-números)
 
 ---
 
@@ -64,15 +64,12 @@ Atalho: `npm start` faz o build e já abre o servidor.
 │   ├── css/style.css        # estilos (mobile-first, claro/escuro automático)
 │   ├── js/app.js            # cards, painel de compartilhar, cópia, Web Share API
 │   ├── js/share.js          # monta as URLs de cada rede (com UTM)
+│   ├── api/contador.php     # contador de compartilhamentos (PHP, roda na Hostinger)
 │   └── sw.js                # service worker (PWA / offline)
-├── worker/                  # fase 2: contador (Cloudflare Worker + D1)
-│   ├── src/index.js
-│   ├── schema.sql
-│   └── wrangler.toml
 ├── test/
 │   ├── smoke.js             # testes rápidos (URLs e meta tags)
 │   ├── e2e.js               # teste no Chrome em tela de celular (390px)
-│   ├── contador.mjs         # testes da fase 2
+│   ├── contador.mjs         # testes do contador (PHP) e da página de números
 │   └── fixture/             # 3 posts de exemplo, usados só pelos testes
 └── dist/                    # site pronto (gerado; não edite)
 ```
@@ -85,7 +82,7 @@ Páginas geradas:
 | `/p/<id>/` | Um post. Tem as meta tags Open Graph/Twitter Card para a prévia bonita no WhatsApp, Facebook e X. É o link que vai nos compartilhamentos. |
 | `/arquivo/` | Dias anteriores (link discreto no rodapé). |
 | `/privacidade/` | Explica que o site não coleta dados pessoais. |
-| `/admin-stats/` | Painel de compartilhamentos (fase 2, protegido por token). |
+| `/numeros/` | "Veja os números": compartilhamentos por rede, por post e por dia (público). |
 
 ## 3. Configuração (`data/config.json`)
 
@@ -99,7 +96,7 @@ Páginas geradas:
 | `mission` | Texto da "Missão do dia", no topo da página inicial. |
 | `footer_identification` | Texto livre sempre exibido no rodapé (ex.: quem produz o material, CNPJ quando aplicável). |
 | `default_credit` | Crédito usado quando o post não tem `credit`. |
-| `counter_endpoint` | Endereço do contador de compartilhamentos (fase 2). Vazio = desligado. |
+| `counter_endpoint` | Endereço do contador (`/api/contador.php`). Vazio = desligado. |
 
 ## 4. Adicionar posts
 
@@ -206,7 +203,7 @@ O site precisa saber o próprio endereço (usado nas prévias dos links no Whats
 4. Rode `npm run pacote` (na primeira vez ele pede o endereço do passo 1), envie o `site.zip` para `public_html` e extraia (passo 3 da seção anterior).
 5. Abra o site no celular e teste o "Compartilhar".
 
-O build gera um `.htaccess` (configuração do servidor Apache/LiteSpeed da Hostinger) com: página de erro 404, redirecionamento para HTTPS, a Content-Security-Policy (bloqueia scripts de terceiros), cache certo para `sw.js`/`posts.json` e `noindex` no `/admin-stats/`. Ele é um arquivo "oculto" (começa com ponto): o `site.zip` já o inclui. Se enviar os arquivos por FTP, confira se o `.htaccess` foi junto.
+O build gera um `.htaccess` (configuração do servidor Apache/LiteSpeed da Hostinger) com: página de erro 404, redirecionamento para HTTPS, a Content-Security-Policy (bloqueia scripts de terceiros), cache certo para `sw.js`/`posts.json`. Ele é um arquivo "oculto" (começa com ponto): o `site.zip` já o inclui. Se enviar os arquivos por FTP, confira se o `.htaccess` foi junto.
 
 > Se algum dia o site mostrar "Erro 500" logo depois de um envio, renomeie `public_html/.htaccess` para `.htaccess-off` e me avise. Isso aponta para alguma diretiva que o servidor não aceitou. O site volta a funcionar sem ele, só perde os cabeçalhos de segurança.
 
@@ -264,7 +261,7 @@ Todos os links levam para a página do post (`/p/<id>/`), com UTM: `utm_source=<
 ```bash
 npm test               # URLs de cada rede e meta tags OG das páginas /p/<id>/
 npm run test:e2e       # abre o site no Chrome em tela de 390px e testa tudo
-npm run test:contador  # fase 2: Worker + contador + /admin-stats/
+npm run test:contador  # contador PHP + página /numeros/ (precisa do PHP em WebAssembly, veja o topo de test/contador.mjs)
 ```
 
 Os testes usam os 3 posts de exemplo de `test/fixture/` e geram o site de teste em `dist-teste/`. O `dist/` e o `site.zip` reais nunca são tocados pelos testes.
@@ -287,71 +284,37 @@ Para conferir a prévia real depois do deploy: [Facebook Sharing Debugger](https
 - **Mudei o site mas o celular mostra a versão antiga:** o app instalado atualiza sozinho na próxima abertura (o service worker busca a nova versão). Feche e abra de novo.
 - **Erro no build:** leia a mensagem — ela indica o post e o campo com problema.
 
-## 11. Fase 2: contador anônimo de compartilhamentos
+## 11. Contador de compartilhamentos e "Veja os números"
 
-Quando ativado:
+O contador roda na **própria Hostinger** (arquivo `api/contador.php`, que vai junto no `site.zip`). Não precisa de conta nem serviço extra.
 
-- cada toque em uma rede envia ao contador **só** `{ postId, network }`, sem IP, cookie ou identificador;
-- o próprio aparelho guarda (no `localStorage`) quais post/rede já foram contados, então cada aparelho conta **1 vez por post e por rede**;
-- a página inicial mostra "X pessoas já compartilharam hoje" (a partir de 1);
-- o painel `/admin-stats/#token=SEU_TOKEN` mostra os compartilhamentos por rede, por post e por dia.
+- Cada toque em uma rede envia ao contador **só** `{ postId, network }`, sem IP, cookie ou identificador.
+- O próprio celular guarda (no `localStorage`) quais post/rede já foram contados: cada aparelho conta **1 vez por post e por rede**.
+- A página inicial mostra "X pessoas já compartilharam hoje · veja os números".
+- A página pública **`/numeros/`** ("Veja os números", também no rodapé) mostra os compartilhamentos de hoje e do período (hoje, 7, 30 ou 90 dias), **por rede**, **por post** e **por dia**. Qualquer pessoa pode ver; não há senha.
 
-O contador é um **Cloudflare Worker** com banco **D1** (código em `worker/`). Ele funciona com o site hospedado tanto no Cloudflare Pages quanto no Netlify.
+### Como está ligado
 
-> **Por que D1 e não KV?** O plano gratuito do Workers KV aceita só 1.000 gravações por dia e não tem incremento atômico (cliques simultâneos se perdem). O D1 gratuito aceita 100 mil gravações por dia e soma `n = n + 1` de forma atômica. Os dois são da Cloudflare e o custo é zero nesse volume.
+Em `data/config.json`: `"counter_endpoint": "/api/contador.php"`. Para desligar, deixe vazio (`""`): o contador, a frase da página inicial e o link "Veja os números" somem.
 
-### Como ativar (≈10 minutos, uma vez só)
+### Onde ficam os dados
 
-Precisa de uma conta gratuita na Cloudflare.
+Numa pasta `espalha-hoje-dados`, criada automaticamente **ao lado** da `public_html` (fora dela). Assim, extrair um `site.zip` novo nunca apaga a contagem, e ninguém consegue baixar o arquivo de dados pelo navegador. Se a hospedagem não permitir criar essa pasta, o contador usa `public_html/api/dados/`, protegida por `.htaccess`.
 
-```bash
-cd worker
-npx wrangler login                              # abre o navegador para autorizar
-npx wrangler d1 create espalha-hoje             # mostra um "database_id"
-```
+O contador usa SQLite (disponível na Hostinger); se não houver, grava num arquivo JSON com trava. Os dois modos são testados.
 
-1. Copie o `database_id` para `worker/wrangler.toml` (no lugar de `COLE-AQUI-O-ID-DO-BANCO`).
-2. Em `worker/wrangler.toml`, troque `ALLOWED_ORIGIN = "*"` pelo endereço do Espalha Hoje (ex.: `"https://espalhahoje.com.br"`).
-3. Crie a tabela e publique:
-
-   ```bash
-   npx wrangler d1 execute espalha-hoje --remote --file=schema.sql
-   npx wrangler secret put ADMIN_TOKEN            # digite um token longo e difícil (ex.: 32 caracteres aleatórios)
-   npx wrangler deploy                            # mostra o endereço: https://espalha-hoje-contador.<sua-conta>.workers.dev
-   ```
-
-4. Coloque esse endereço em `data/config.json`:
-
-   ```json
-   "counter_endpoint": "https://espalha-hoje-contador.<sua-conta>.workers.dev"
-   ```
-
-   (ou defina a variável de ambiente `COUNTER_ENDPOINT` no painel da hospedagem).
-5. Rode `npm run pacote` e envie o `site.zip` para a Hostinger. O build libera esse endereço na Content-Security-Policy automaticamente.
-6. Acesse `https://SEU-DOMINIO/admin-stats/#token=SEU_TOKEN`.
-
-O token é conferido pelo Worker (lido do segredo `ADMIN_TOKEN`); ele nunca fica no código do site. Use `#token=` (e não `?token=`), assim ele não aparece em logs de servidor. Para trocar o token, rode `npx wrangler secret put ADMIN_TOKEN` de novo.
-
-### Testar o Worker no computador
-
-```bash
-cd worker
-npx wrangler d1 execute espalha-hoje --local --file=schema.sql
-npx wrangler dev                                 # Worker local em http://localhost:8787
-```
-
-Em outro terminal, na raiz do projeto: `COUNTER_ENDPOINT=http://localhost:8787 npm run build && npm run dev` (no PowerShell: `$env:COUNTER_ENDPOINT="http://localhost:8787"; npm run build; npm run dev`). Para o painel local, crie `worker/.dev.vars` com a linha `ADMIN_TOKEN=um-token-de-teste`.
-
-### Rotas do Worker
+### Rotas
 
 | Rota | Uso |
 |---|---|
-| `POST /hit` | Corpo `{"postId":"2026-10-14-01","network":"whatsapp"}`. Soma 1. Redes aceitas: whatsapp, telegram, x, threads, facebook, reddit, instagram, tiktok, kwai, nativo. |
-| `GET /today` | `{"day":"2026-10-14","total":123}`. Cache de 60 s na Cloudflare para poupar o banco. |
-| `GET /stats?days=7` | Exige `Authorization: Bearer <ADMIN_TOKEN>`. Totais por rede, por post e por dia. |
+| `POST /api/contador.php?acao=hit` | Corpo `{"postId":"2026-10-14-01","network":"whatsapp"}`. Soma 1. Só aceita posts que existem no site e as redes: whatsapp, telegram, x, threads, facebook, reddit, instagram, tiktok, kwai, nativo. |
+| `GET /api/contador.php?acao=hoje` | `{"dia":"2026-10-14","total":123}` |
+| `GET /api/contador.php?acao=numeros&dias=7` | Totais de hoje e do período, por rede, por post e por dia. |
 
 ### Limites (para saber o que esperar)
 
 - **"pessoas" na frase da página inicial é uma aproximação:** o número soma compartilhamentos (1 por post/rede/aparelho). Quem compartilha 3 posts em 2 redes conta 6.
-- **É possível inflar o contador** de propósito (limpando o navegador ou chamando o `/hit` direto). Sem identificar pessoas, isso não tem como ser evitado 100%. Use o número como termômetro, não como dado exato.
-- A Cloudflare, como qualquer servidor, recebe o IP na conexão. O Worker não lê nem grava esse IP, e os logs ficam desligados (`[observability] enabled = false`).
+- O contador registra o **toque no botão** da rede, não a publicação em si.
+- **É possível inflar o contador** de propósito (limpando o navegador ou chamando a rota direto). Sem identificar pessoas, isso não tem como ser evitado 100%. Use o número como termômetro.
+- O servidor da Hostinger, como qualquer servidor, recebe o IP na conexão e pode guardá-lo nos logs de acesso da hospedagem. O contador não lê nem grava esse IP.
+- No computador, o `npm run dev` não roda PHP: a contagem só funciona no site publicado.

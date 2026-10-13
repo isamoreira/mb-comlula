@@ -111,7 +111,7 @@ posts.forEach((p) => {
 });
 
 teste('páginas principais existem', () => {
-  ['index.html', 'hoje/index.html', 'arquivo/index.html', 'privacidade/index.html', '404.html', 'manifest.webmanifest', 'sw.js', '_headers', '.htaccess', 'admin-stats/.htaccess'].forEach((f) =>
+  ['index.html', 'hoje/index.html', 'arquivo/index.html', 'privacidade/index.html', '404.html', 'manifest.webmanifest', 'sw.js', '_headers', '.htaccess', 'numeros/index.html', 'api/contador.php'].forEach((f) =>
     assert.ok(fs.existsSync(path.join(DIST, f)), 'faltando ' + f)
   );
 });

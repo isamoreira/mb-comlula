@@ -126,7 +126,7 @@ self.addEventListener('fetch', function (ev) {
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // nada de terceiros
-  if (url.pathname.indexOf('/admin-stats') === 0) return; // painel admin nunca em cache
+  if (url.pathname.indexOf('/api/') === 0) return; // contador: sempre direto do servidor
   if (/\.(mp4|webm|mov|m4v)$/i.test(url.pathname)) return; // vídeos: direto da rede
 
   if (req.mode === 'navigate' || url.pathname === '/data/posts.json') {
