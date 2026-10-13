@@ -5,7 +5,7 @@ Página simples, pensada para celular, onde voluntários veem **só os conteúdo
 - Sem login, sem cadastro, sem cookies, sem Google Analytics, sem rastreadores de terceiros.
 - Site estático (HTML + CSS + JavaScript puro), gerado por um script Node.js.
 - Pode ser "instalado" na tela inicial do celular (PWA).
-- Hospedagem gratuita no Cloudflare Pages ou no Netlify.
+- Publicado em **https://podeespalhar.com.br** (Hostinger). Também funciona no Cloudflare Pages ou no Netlify.
 
 ---
 
@@ -16,7 +16,7 @@ Página simples, pensada para celular, onde voluntários veem **só os conteúdo
 3. [Configuração (`data/config.json`)](#3-configuração-dataconfigjson)
 4. [Adicionar posts](#4-adicionar-posts)
 5. [Publicar os 3 posts do dia em menos de 5 minutos](#5-publicar-os-3-posts-do-dia-em-menos-de-5-minutos)
-6. [Deploy no Cloudflare Pages ou Netlify](#6-deploy-no-cloudflare-pages-ou-netlify)
+6. [Deploy (Hostinger, Cloudflare Pages ou Netlify)](#6-deploy-hostinger-cloudflare-pages-ou-netlify)
 7. [Como o compartilhamento funciona em cada rede](#7-como-o-compartilhamento-funciona-em-cada-rede)
 8. [Testes](#8-testes)
 9. [Privacidade e conformidade](#9-privacidade-e-conformidade)
@@ -53,7 +53,8 @@ Atalho: `npm start` faz o build e já abre o servidor.
 ├── media/                   # imagens e vídeos dos posts (+ thumbs)
 ├── scripts/
 │   ├── novo-post.js         # CLI interativa (npm run novo-post)
-│   ├── gerar-exemplos.js    # gera as imagens de exemplo (npm run exemplos)
+│   ├── gerar-exemplos.js    # gera as imagens de exemplo dos testes (npm run exemplos)
+│   ├── pacote.js            # gera o site.zip para a Hostinger (npm run pacote)
 │   └── lib/midia.js         # thumbs, capas e placeholders
 ├── src/
 │   ├── css/style.css        # estilos (mobile-first, claro/escuro automático)
@@ -67,7 +68,8 @@ Atalho: `npm start` faz o build e já abre o servidor.
 ├── test/
 │   ├── smoke.js             # testes rápidos (URLs e meta tags)
 │   ├── e2e.js               # teste no Chrome em tela de celular (390px)
-│   └── contador.mjs         # testes da fase 2
+│   ├── contador.mjs         # testes da fase 2
+│   └── fixture/             # 3 posts de exemplo, usados só pelos testes
 └── dist/                    # site pronto (gerado; não edite)
 ```
 
@@ -87,7 +89,7 @@ Páginas geradas:
 |---|---|
 | `project_name` | Nome no topo, na aba do navegador e no app instalado. |
 | `tagline` | Descrição curta (aparece na prévia do link da página inicial). |
-| `site_url` | **Endereço público do site** (ex.: `https://espalha-hoje.pages.dev`). Usado nas meta tags de prévia, que exigem endereço completo. Pode ser sobrescrito pela variável de ambiente `SITE_URL`. |
+| `site_url` | **Endereço público do site** (hoje: `https://podeespalhar.com.br`). Usado nas meta tags de prévia, que exigem endereço completo. Pode ser sobrescrito pela variável de ambiente `SITE_URL`. |
 | `primary_color` | Cor principal, formato `#RRGGBB`. A cor do texto sobre ela (branco ou preto) é escolhida automaticamente para manter o contraste. |
 | `logo` | Caminho de um logo (ex.: `media/logo.png` ou `.svg`, de preferência quadrado). Vazio = logo padrão. Os ícones do app são gerados a partir dele. |
 | `mission` | Texto da "Missão do dia", no topo da página inicial. |
@@ -142,11 +144,9 @@ Vídeos: se o [ffmpeg](https://ffmpeg.org) estiver instalado, a capa é tirada d
 
 **Agendamento:** posts com data futura ficam escondidos na página inicial até o dia chegar. Dá para preparar os posts de amanhã hoje à noite e publicar de uma vez.
 
-> Os 3 posts que vêm no projeto são **exemplos** (texto genérico e imagens geradas por `npm run exemplos`). Apague-os de `data/posts.json` e de `/media` quando for usar de verdade.
+> `data/posts.json` começa vazio: enquanto não houver posts, o site mostra "Ainda não há conteúdos publicados". Os 3 posts de exemplo ficam em `test/fixture/` e só são usados pelos testes (nunca vão para o site).
 
 ## 5. Publicar os 3 posts do dia em menos de 5 minutos
-
-Antes (uma vez só): faça o deploy por Git (seção 6, opção 1). A partir daí, cada `git push` publica o site sozinho.
 
 Todo dia:
 
@@ -155,23 +155,39 @@ Todo dia:
    ```bash
    npm run novo-post
    ```
-   Preencha o 1º post, responda `s` para "Adicionar outro post?", repita para o 2º e o 3º. No final, escreva a missão do dia e confirme o build.
-3. **Confira** (opcional, 30 s): `npm run dev` e abra http://localhost:8080.
-4. **Publique** (30 s):
+   Preencha o 1º post, responda `s` para "Adicionar outro post?", repita para o 2º e o 3º. No final, escreva a missão do dia e responda `n` ao build (o passo 4 já faz o build).
+3. **Confira** (opcional, 30 s): `npm run build`, `npm run dev` e abra http://localhost:8080.
+4. **Gere o pacote** (10 s):
    ```bash
-   git add -A
-   git commit -m "Posts de 2026-10-14"
-   git push
+   npm run pacote
    ```
-   O Cloudflare Pages/Netlify faz o build e o site fica no ar em ~1 minuto.
+   Isso faz o build e cria o arquivo `site.zip` na pasta do projeto.
+5. **Envie para a Hostinger** (1 min): hPanel → **Arquivos → Gerenciador de Arquivos** → abra `public_html` → **Upload** do `site.zip` → clique com o botão direito no `site.zip` → **Extrair** (na própria `public_html`, substituindo os arquivos) → apague o `site.zip` de lá.
 
-Sem Git? Rode `npm run build` e use `npx wrangler pages deploy dist --project-name espalha-hoje` (Cloudflare) ou `npx netlify-cli deploy --prod --dir dist` (Netlify).
+Pronto: https://podeespalhar.com.br já mostra os posts novos.
 
-## 6. Deploy no Cloudflare Pages ou Netlify
+**Dica:** prepare os posts de amanhã hoje à noite (com a data de amanhã). Eles ficam escondidos até o dia chegar, então dá para enviar o `site.zip` de uma vez.
+
+## 6. Deploy (Hostinger, Cloudflare Pages ou Netlify)
 
 ### Antes de tudo
 
-Ajuste `site_url` em `data/config.json` para o endereço final do site (ou defina a variável de ambiente `SITE_URL` no painel da hospedagem). Sem isso, as prévias dos links no WhatsApp/Facebook apontam para o endereço errado.
+`site_url` em `data/config.json` já está como `https://podeespalhar.com.br`. Se o endereço mudar, troque ali: ele é usado nas prévias dos links no WhatsApp/Facebook.
+
+### Hostinger (o site oficial: podeespalhar.com.br)
+
+**Primeira vez:**
+
+1. No hPanel, confirme que o domínio `podeespalhar.com.br` está apontado para a hospedagem.
+2. Em **Segurança → SSL**, ative o certificado SSL (gratuito) do domínio. O site exige HTTPS: sem ele, "Copiar legenda" e a lista de apps do celular não funcionam. O `.htaccess` já redireciona `http://` para `https://`.
+3. No **Gerenciador de Arquivos**, apague o que houver em `public_html` (por exemplo, o `default.php` de boas-vindas da Hostinger).
+4. Rode `npm run pacote`, envie o `site.zip` para `public_html` e extraia (passo 5 da seção anterior).
+5. Abra https://podeespalhar.com.br no celular e teste o "Compartilhar".
+
+O build gera um `.htaccess` (configuração do servidor Apache/LiteSpeed da Hostinger) com: página de erro 404, redirecionamento para HTTPS, a Content-Security-Policy (bloqueia scripts de terceiros), cache certo para `sw.js`/`posts.json` e `noindex` no `/admin-stats/`. Ele é um arquivo "oculto" (começa com ponto): o `site.zip` já o inclui. Se enviar os arquivos por FTP, confira se o `.htaccess` foi junto.
+
+> Se algum dia o site mostrar "Erro 500" logo depois de um envio, renomeie `public_html/.htaccess` para `.htaccess-off` e me avise. Isso aponta para alguma diretiva que o servidor não aceitou. O site volta a funcionar sem ele, só perde os cabeçalhos de segurança.
+
 
 ### Cloudflare Pages
 
@@ -202,7 +218,7 @@ npx wrangler pages deploy dist --project-name espalha-hoje
 
 **Opção 3 — linha de comando:** `npx netlify-cli deploy --prod --dir dist`.
 
-Os cabeçalhos de segurança (`dist/_headers`: Content-Security-Policy, sem cache para `sw.js` e `posts.json` etc.) funcionam nos dois serviços.
+Os cabeçalhos de segurança (`dist/_headers`: Content-Security-Policy, sem cache para `sw.js` e `posts.json` etc.) funcionam nesses dois serviços. Na Hostinger, quem faz isso é o `dist/.htaccess`.
 
 ## 7. Como o compartilhamento funciona em cada rede
 
@@ -224,11 +240,12 @@ Todos os links levam para a página do post (`/p/<id>/`), com UTM: `utm_source=<
 ## 8. Testes
 
 ```bash
-npm run build
-npm test            # URLs de cada rede e meta tags OG das páginas /p/<id>/
-npm run test:e2e    # abre o site no Chrome em tela de 390px e testa tudo
-npm run test:contador  # fase 2: Worker + contador + /admin-stats/ (refaz o dist/ no final)
+npm test               # URLs de cada rede e meta tags OG das páginas /p/<id>/
+npm run test:e2e       # abre o site no Chrome em tela de 390px e testa tudo
+npm run test:contador  # fase 2: Worker + contador + /admin-stats/
 ```
+
+Os testes usam os 3 posts de exemplo de `test/fixture/` e geram o site de teste em `dist-teste/`. O `dist/` e o `site.zip` reais nunca são tocados pelos testes.
 
 O teste e2e usa o Chrome ou Edge instalado (se não achar, defina `CHROME_PATH`). Ele verifica: posts do dia, aviso de dia anterior, posts futuros escondidos, botões ≥ 48px, ausência de rolagem horizontal, "Trocar legenda", "Copiar legenda", URL de cada rede, fallback do Instagram, Web Share com arquivo, modo escuro, meta tags OG e as páginas de arquivo/privacidade. As capturas de tela ficam em `test/screenshots/`.
 
@@ -236,7 +253,7 @@ Para conferir a prévia real depois do deploy: [Facebook Sharing Debugger](https
 
 ## 9. Privacidade e conformidade
 
-- Nenhum dado pessoal é coletado. Não há cookies, login, formulários nem scripts de terceiros (a Content-Security-Policy em `_headers` bloqueia qualquer script externo).
+- Nenhum dado pessoal é coletado. Não há cookies, login, formulários nem scripts de terceiros (a Content-Security-Policy em `.htaccess`/`_headers` bloqueia qualquer script externo).
 - O rodapé sempre mostra `footer_identification` e os créditos (`credit`) dos posts exibidos; cada card também mostra seu crédito.
 - A página `/privacidade/` explica o que é (e o que não é) registrado.
 - Todo o conteúdo vem de `data/posts.json` e de `/media`. O site não busca nada de outros sites.
@@ -272,7 +289,7 @@ npx wrangler d1 create espalha-hoje             # mostra um "database_id"
 ```
 
 1. Copie o `database_id` para `worker/wrangler.toml` (no lugar de `COLE-AQUI-O-ID-DO-BANCO`).
-2. Em `worker/wrangler.toml`, troque `ALLOWED_ORIGIN = "*"` pelo endereço do site (ex.: `"https://espalha-hoje.pages.dev"`).
+2. Em `worker/wrangler.toml`, troque `ALLOWED_ORIGIN = "*"` por `"https://podeespalhar.com.br"`.
 3. Crie a tabela e publique:
 
    ```bash
@@ -288,8 +305,8 @@ npx wrangler d1 create espalha-hoje             # mostra um "database_id"
    ```
 
    (ou defina a variável de ambiente `COUNTER_ENDPOINT` no painel da hospedagem).
-5. Rode `npm run build` e publique o site. O build libera esse endereço na Content-Security-Policy automaticamente.
-6. Acesse `https://seu-site/admin-stats/#token=SEU_TOKEN`.
+5. Rode `npm run pacote` e envie o `site.zip` para a Hostinger. O build libera esse endereço na Content-Security-Policy automaticamente.
+6. Acesse `https://podeespalhar.com.br/admin-stats/#token=SEU_TOKEN`.
 
 O token é conferido pelo Worker (lido do segredo `ADMIN_TOKEN`); ele nunca fica no código do site. Use `#token=` (e não `?token=`), assim ele não aparece em logs de servidor. Para trocar o token, rode `npx wrangler secret put ADMIN_TOKEN` de novo.
 

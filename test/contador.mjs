@@ -2,7 +2,7 @@
 // 1) Testa o Worker direto, com um banco D1 simulado em memória.
 // 2) Sobe o Worker localmente, gera o site apontando para ele e testa no Chrome (390px):
 //    clique conta 1x por post/rede/aparelho, "X pessoas já compartilharam hoje" e /admin-stats/.
-// Uso: npm run test:contador   (ao final, o dist/ é gerado de novo sem o contador)
+// Uso: npm run test:contador   (usa os posts de exemplo em dist-teste/)
 import assert from 'node:assert';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -19,7 +19,7 @@ const PORTA_WORKER = 8788;
 const TOKEN = 'token-de-teste-123';
 
 // O Worker e o navegador "acham" que hoje é o último dia com posts.
-const posts = JSON.parse(fs.readFileSync(path.join(RAIZ, 'data/posts.json'), 'utf8'));
+const posts = JSON.parse(fs.readFileSync(path.join(RAIZ, 'test/fixture/data/posts.json'), 'utf8'));
 const DIA = posts.map((p) => p.date).sort().pop();
 const AGORA = new Date(DIA + 'T15:00:00Z').getTime();
 const DataReal = Date;
@@ -145,9 +145,9 @@ const servidorWorker = http
   })
   .listen(PORTA_WORKER);
 
-const build = spawnSync(process.execPath, [path.join(RAIZ, 'build.js')], { env: { ...process.env, COUNTER_ENDPOINT: `http://localhost:${PORTA_WORKER}` }, encoding: 'utf8' });
+const build = spawnSync(process.execPath, [path.join(RAIZ, 'build.js'), '--exemplo'], { env: { ...process.env, COUNTER_ENDPOINT: `http://localhost:${PORTA_WORKER}` }, encoding: 'utf8' });
 assert.strictEqual(build.status, 0, build.stderr);
-const site = spawn(process.execPath, [path.join(RAIZ, 'dev.js')], { env: { ...process.env, PORT: String(PORTA_SITE) }, stdio: 'ignore' });
+const site = spawn(process.execPath, [path.join(RAIZ, 'dev.js')], { env: { ...process.env, PORT: String(PORTA_SITE), DIST_DIR: 'dist-teste' }, stdio: 'ignore' });
 await new Promise((r) => setTimeout(r, 800));
 
 const puppeteer = require('puppeteer-core');
@@ -228,8 +228,6 @@ try {
   await browser.close();
   site.kill();
   servidorWorker.close();
-  // Gera o dist/ de novo com a configuração normal.
-  spawnSync(process.execPath, [path.join(RAIZ, 'build.js')], { stdio: 'ignore' });
 }
 
 console.log(falhas ? `\n✖ ${falhas} teste(s) falharam.\n` : '\n✔ Todos os testes do contador passaram.\n');

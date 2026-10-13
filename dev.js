@@ -8,7 +8,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const DIST = path.join(__dirname, 'dist');
+// DIST_DIR permite servir outra pasta (os testes usam dist-teste/).
+const DIST = path.join(__dirname, process.env.DIST_DIR || 'dist');
 const PORTA = Number(process.env.PORT) || 8080;
 
 const TIPOS = {

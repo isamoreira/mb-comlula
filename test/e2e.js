@@ -1,5 +1,5 @@
 // Teste no navegador (Chrome/Edge instalado no computador), em viewport de celular (390px).
-// Uso: npm run build && npm run test:e2e
+// Uso: npm run test:e2e  (usa os posts de exemplo em dist-teste/)
 // Se o Chrome não for encontrado, defina CHROME_PATH com o caminho do executável.
 // Capturas de tela ficam em test/screenshots/.
 'use strict';
@@ -61,7 +61,7 @@ async function teste(nome, fn) {
   }
   fs.mkdirSync(FOTOS, { recursive: true });
 
-  const servidor = spawn(process.execPath, [path.join(__dirname, '..', 'dev.js')], { env: { ...process.env, PORT: String(PORTA) }, stdio: 'ignore' });
+  const servidor = spawn(process.execPath, [path.join(__dirname, '..', 'dev.js')], { env: { ...process.env, PORT: String(PORTA), DIST_DIR: 'dist-teste' }, stdio: 'ignore' });
   await new Promise((r) => setTimeout(r, 800));
 
   const browser = await puppeteer.launch({ executablePath: chrome, headless: true, args: ['--no-sandbox'] });
@@ -78,7 +78,7 @@ async function teste(nome, fn) {
     return page;
   }
 
-  const posts = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'dist/data/posts.json'), 'utf8'));
+  const posts = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'dist-teste/data/posts.json'), 'utf8'));
   const ultimoDia = posts.map((p) => p.date).sort().pop();
   const doDia = posts.filter((p) => p.date === ultimoDia);
 

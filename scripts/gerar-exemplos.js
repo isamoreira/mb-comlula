@@ -1,4 +1,4 @@
-// Gera as imagens placeholder dos 3 posts de exemplo (em /media).
+// Gera as imagens placeholder dos 3 posts de exemplo (em test/fixture/media, usadas só pelos testes).
 // Uso: npm run exemplos
 'use strict';
 
@@ -15,15 +15,15 @@ const EXEMPLOS = [
 ];
 
 (async () => {
-  fs.mkdirSync(path.join(RAIZ, 'media'), { recursive: true });
+  fs.mkdirSync(path.join(RAIZ, 'test/fixture/media'), { recursive: true });
   for (const ex of EXEMPLOS) {
-    const arquivo = path.join(RAIZ, 'media', `${ex.id}.jpg`);
-    const thumb = path.join(RAIZ, 'media', `${ex.id}-thumb.jpg`);
+    const arquivo = path.join(RAIZ, 'test/fixture/media', `${ex.id}.jpg`);
+    const thumb = path.join(RAIZ, 'test/fixture/media', `${ex.id}-thumb.jpg`);
     const gerado = await gerarCartaz(arquivo, { largura: 1080, altura: 1350, cor: ex.cor, titulo: ex.titulo, subtitulo: 'Conteúdo de teste • Espalha Hoje' });
     if (gerado.endsWith('.jpg')) await thumbDeImagem(arquivo, thumb);
     console.log('✔', path.relative(RAIZ, gerado));
   }
-  console.log('Pronto! Imagens de exemplo geradas em /media.');
+  console.log('Pronto! Imagens de exemplo geradas em test/fixture/media.');
 })().catch((e) => {
   console.error(e);
   process.exit(1);

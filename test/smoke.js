@@ -1,5 +1,5 @@
 // Testes rápidos (sem navegador): URLs de compartilhamento e meta tags das páginas /p/<id>/.
-// Uso: npm run build && npm test
+// Uso: npm test  (gera dist-teste/ com os posts de exemplo e testa)
 'use strict';
 
 const assert = require('assert');
@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const Share = require('../src/js/share.js');
 
-const DIST = path.join(__dirname, '..', 'dist');
+const DIST = path.join(__dirname, '..', 'dist-teste');
 let falhas = 0;
 
 function teste(nome, fn) {
@@ -73,7 +73,7 @@ teste('UTM é adicionado com & quando a URL já tem ?', () => {
 // ---------------------------------------------------------------------------
 console.log('\nPáginas geradas');
 if (!fs.existsSync(path.join(DIST, 'index.html'))) {
-  console.log('  ✖ dist/ não existe. Rode "npm run build" antes.');
+  console.log('  ✖ dist-teste/ não existe. Rode "node build.js --exemplo" antes.');
   process.exit(1);
 }
 
@@ -99,7 +99,7 @@ posts.forEach((p) => {
 });
 
 teste('páginas principais existem', () => {
-  ['index.html', 'hoje/index.html', 'arquivo/index.html', 'privacidade/index.html', '404.html', 'manifest.webmanifest', 'sw.js', '_headers'].forEach((f) =>
+  ['index.html', 'hoje/index.html', 'arquivo/index.html', 'privacidade/index.html', '404.html', 'manifest.webmanifest', 'sw.js', '_headers', '.htaccess', 'admin-stats/.htaccess'].forEach((f) =>
     assert.ok(fs.existsSync(path.join(DIST, f)), 'faltando ' + f)
   );
 });

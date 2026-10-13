@@ -5,3 +5,5 @@ test/screenshots/
 .dev.vars
 .DS_Store
 Thumbs.db
+dist-teste/
+*.zip

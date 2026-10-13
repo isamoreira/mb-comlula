@@ -1,6 +1,7 @@
 // Build do Espalha Hoje: lê data/posts.json e data/config.json e gera o site estático em /dist.
 // Uso: npm run build
 // Variável de ambiente opcional: SITE_URL (endereço público, usado nas meta tags Open Graph).
+// Com "--exemplo", usa os posts de exemplo de test/fixture e gera em dist-teste/ (usado pelos testes).
 'use strict';
 
 const fs = require('fs');
@@ -9,15 +10,18 @@ const crypto = require('crypto');
 const { carregarSharp } = require('./scripts/lib/midia');
 
 const RAIZ = __dirname;
-const DIST = path.join(RAIZ, 'dist');
+const EXEMPLO = process.argv.includes('--exemplo');
+// BASE: de onde vêm posts.json e /media. O config.json sempre vem de data/.
+const BASE = EXEMPLO ? path.join(RAIZ, 'test/fixture') : RAIZ;
+const DIST = path.join(RAIZ, EXEMPLO ? 'dist-teste' : 'dist');
 const SRC = path.join(RAIZ, 'src');
 
 // ---------------------------------------------------------------------------
 // Leitura e validação dos dados
 // ---------------------------------------------------------------------------
 
-function lerJson(rel) {
-  const arq = path.join(RAIZ, rel);
+function lerJson(rel, base = RAIZ) {
+  const arq = path.join(base, rel);
   try {
     return JSON.parse(fs.readFileSync(arq, 'utf8'));
   } catch (e) {
@@ -31,7 +35,7 @@ function falhar(msg) {
 }
 
 const config = lerJson('data/config.json');
-const posts = lerJson('data/posts.json');
+const posts = lerJson('data/posts.json', BASE);
 
 // Prioridade: variável SITE_URL > data/config.json > URL automática do Netlify > localhost.
 const SITE_URL = String(process.env.SITE_URL || config.site_url || process.env.URL || 'http://localhost:8080').replace(/\/+$/, '');
@@ -55,8 +59,8 @@ function validarPosts() {
     if (!Array.isArray(p.captions) || !p.captions.length) erros.push(`${onde}: "captions" precisa ter pelo menos 1 legenda.`);
     if (!p.media || !['image', 'video'].includes(p.media.type)) erros.push(`${onde}: "media.type" deve ser "image" ou "video".`);
     else {
-      if (!p.media.file || !fs.existsSync(path.join(RAIZ, p.media.file))) erros.push(`${onde}: arquivo de mídia não encontrado: ${p.media.file}`);
-      if (p.media.thumb && !fs.existsSync(path.join(RAIZ, p.media.thumb))) erros.push(`${onde}: thumb não encontrada: ${p.media.thumb}`);
+      if (!p.media.file || !fs.existsSync(path.join(BASE, p.media.file))) erros.push(`${onde}: arquivo de mídia não encontrado: ${p.media.file}`);
+      if (p.media.thumb && !fs.existsSync(path.join(BASE, p.media.thumb))) erros.push(`${onde}: thumb não encontrada: ${p.media.thumb}`);
       if (p.media.type === 'video' && !p.media.thumb) erros.push(`${onde}: vídeos precisam de "media.thumb" (imagem de capa).`);
     }
     if (p.hashtags && !Array.isArray(p.hashtags)) erros.push(`${onde}: "hashtags" deve ser uma lista.`);
@@ -536,6 +540,48 @@ function headers() {
 `;
 }
 
+// .htaccess: o mesmo que o _headers, para hospedagens Apache/LiteSpeed (ex.: Hostinger).
+function htaccess() {
+  const csp = /Content-Security-Policy: (.*)/.exec(headers())[1];
+  return `# Gerado pelo build.js. Configuração para Apache/LiteSpeed (Hostinger).
+DirectoryIndex index.html
+ErrorDocument 404 /404.html
+Options -Indexes
+
+AddType application/manifest+json .webmanifest
+AddType image/svg+xml .svg
+AddType video/mp4 .mp4
+AddType video/webm .webm
+
+# Sempre HTTPS (necessário para "Copiar legenda" e para a lista de apps do celular).
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always set Content-Security-Policy "${csp}"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+
+  # HTML, sw.js e posts.json: sempre conferir se há versão nova.
+  <FilesMatch "(\\.html|sw\\.js|posts\\.json|\\.webmanifest)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  # CSS/JS têm ?v= no endereço; mídias não mudam de nome.
+  <FilesMatch "\\.(css|js|jpg|jpeg|png|webp|gif|svg|mp4|webm)$">
+    Header set Cache-Control "public, max-age=604800"
+  </FilesMatch>
+  <FilesMatch "sw\\.js$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
+`;
+}
+
 // ---------------------------------------------------------------------------
 // Execução
 // ---------------------------------------------------------------------------
@@ -550,7 +596,7 @@ async function main() {
   // Arquivos estáticos e mídias.
   copiarPasta(path.join(SRC, 'css'), path.join(DIST, 'css'));
   copiarPasta(path.join(SRC, 'js'), path.join(DIST, 'js'));
-  copiarPasta(path.join(RAIZ, 'media'), path.join(DIST, 'media'));
+  copiarPasta(path.join(BASE, 'media'), path.join(DIST, 'media'));
   escrever('css/theme.css', temaCss());
 
   const logo = prepararLogo();
@@ -578,7 +624,7 @@ async function main() {
   for (const p of ordenados) {
     const post = JSON.parse(JSON.stringify(p));
     post.hashtags = post.hashtags || [];
-    const capa = path.join(RAIZ, post.media.thumb || post.media.file);
+    const capa = path.join(BASE, post.media.thumb || post.media.file);
     let og = { url: urlAbs(post.media.thumb || post.media.file) };
 
     if (sharp) {
@@ -628,12 +674,23 @@ async function main() {
     .replace('__ARQUIVOS__', JSON.stringify(shell));
   escrever('sw.js', sw);
   escrever('_headers', headers());
+  escrever('.htaccess', htaccess());
+  // Painel de estatísticas: fora dos buscadores e sem cache (Apache/LiteSpeed).
+  escrever(
+    'admin-stats/.htaccess',
+    `<IfModule mod_headers.c>
+  Header always set X-Robots-Tag "noindex, nofollow"
+  Header always set Cache-Control "no-store"
+</IfModule>
+`
+  );
   escrever('robots.txt', 'User-agent: *\nDisallow: /admin-stats/\n');
 
   const dias = new Set(publicos.map((p) => p.date)).size;
-  console.log(`✔ Build concluído em ${Date.now() - inicio} ms → dist/`);
+  console.log(`✔ Build concluído em ${Date.now() - inicio} ms → ${path.basename(DIST)}/${EXEMPLO ? ' (posts de exemplo, só para testes)' : ''}`);
   console.log(`  ${publicos.length} posts, ${dias} dia(s). Endereço público: ${SITE_URL}`);
   console.log(CONTADOR ? `  Contador ativado: ${CONTADOR}` : '  Contador desativado (fase 2: preencha "counter_endpoint").');
+  if (!publicos.length) console.log('  Nenhum post ainda: adicione com "npm run novo-post".');
   if (/espalha-hoje\.pages\.dev/.test(SITE_URL)) {
     console.log('  Dica: ajuste "site_url" em data/config.json (ou a variável SITE_URL) para o endereço real do site.');
   }
