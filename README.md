@@ -6,7 +6,7 @@ Página simples, pensada para celular, onde voluntários veem **só os conteúdo
 - Site estático (HTML + CSS + JavaScript puro), gerado por um script Node.js.
 - Pode ser "instalado" na tela inicial do celular (PWA).
 - Hospedado na Hostinger (também funciona no Cloudflare Pages ou no Netlify).
-- Os 3 conteúdos do dia são escolhidos no site Pode Espalhar (podeespalhar.com.br) e cadastrados aqui com `npm run novo-post`. O site não busca nada sozinho no Pode Espalhar: mostra só o que for cadastrado. Coloque o link do post original em "Link da fonte" e o crédito em "Crédito".
+- Os 3 conteúdos do dia vêm do **Pode Espalhar** (podeespalhar.com.br): o comando `npm run importar` lista os conteúdos mais recentes pela API pública deles, você escolhe 3 e ele baixa tudo. O site só mostra o que for importado; nada é publicado sem alguém escolher.
 
 ---
 
@@ -53,10 +53,11 @@ Atalho: `npm start` faz o build e já abre o servidor.
 │   └── posts.json           # os posts (todos os dias)
 ├── media/                   # imagens e vídeos dos posts (+ thumbs)
 ├── scripts/
-│   ├── novo-post.js         # CLI interativa (npm run novo-post)
+│   ├── importar.js          # importa do Pode Espalhar (npm run importar)
+│   ├── novo-post.js         # cadastro manual de um post (npm run novo-post)
 │   ├── gerar-exemplos.js    # gera as imagens de exemplo dos testes (npm run exemplos)
 │   ├── pacote.js            # gera o site.zip para a Hostinger (npm run pacote)
-│   └── lib/midia.js         # thumbs, capas e placeholders
+│   └── lib/                 # funções compartilhadas (mídia, posts)
 ├── src/
 │   ├── css/style.css        # estilos (mobile-first, claro/escuro automático)
 │   ├── js/app.js            # cards, painel de compartilhar, cópia, Web Share API
@@ -100,7 +101,26 @@ Páginas geradas:
 
 ## 4. Adicionar posts
 
-### Opção A — CLI interativa (recomendado)
+### Opção A — importar do Pode Espalhar (recomendado)
+
+```bash
+npm run importar
+```
+
+1. Aparece a lista dos conteúdos mais recentes do Pode Espalhar, numerada, com data, formato, campanha e o começo da legenda.
+   - `m` mostra mais conteúdos;
+   - `b palavra` busca (ex.: `b 6x1`, `b saúde`);
+   - digite os números escolhidos, ex.: `1 4 7`.
+2. Confirme a data em que eles aparecem no Espalha Hoje (Enter = hoje) e, se quiser, hashtags.
+3. Para cada conteúdo, o importador:
+   - baixa o **vídeo ou imagem original** e a capa para `/media` (o site não depende do servidor do Pode Espalhar);
+   - preenche título, legenda, tema (a campanha), link da fonte e crédito "Pode Espalhar";
+   - pergunta por **variações de legenda** (opcional, mas recomendado: com 2 ou 3 variações aparece o botão "Trocar legenda" e evita texto idêntico em muitas contas). Enter vazio pula.
+4. No final: missão do dia e geração do `site.zip`.
+
+Se você importar o mesmo conteúdo duas vezes para o mesmo dia, ele é pulado. Para automatizar: `npm run importar -- --ids=2219220,2218993,2216484 --data=2026-10-14 --sim` (ids do Pode Espalhar; `--sim` aceita os padrões).
+
+### Opção B — CLI de cadastro manual (para conteúdos que não estão no Pode Espalhar)
 
 ```bash
 npm run novo-post
@@ -116,7 +136,7 @@ Ela pergunta: data (Enter = hoje), título, tema, legendas (uma por vez; Enter v
 
 Vídeos: se o [ffmpeg](https://ffmpeg.org) estiver instalado, a capa é tirada do próprio vídeo. Senão, a CLI pede uma imagem de capa (ou gera uma capa simples com o título).
 
-### Opção B — editar `data/posts.json` à mão
+### Opção C — editar `data/posts.json` à mão
 
 ```json
 {
@@ -151,23 +171,21 @@ Vídeos: se o [ffmpeg](https://ffmpeg.org) estiver instalado, a capa é tirada d
 
 Todo dia:
 
-1. **Separe o material** (1 min): as 3 mídias numa pasta e as legendas num bloco de notas (3 variações por post).
-2. **Rode a CLI** (3 min):
+1. **Importe e escolha** (2–3 min):
    ```bash
-   npm run novo-post
+   npm run importar
    ```
-   Preencha o 1º post, responda `s` para "Adicionar outro post?", repita para o 2º e o 3º. No final, escreva a missão do dia e responda `n` ao build (o passo 4 já faz o build).
-3. **Confira** (opcional, 30 s): `npm run build`, `npm run dev` e abra http://localhost:8080.
-4. **Gere o pacote** (10 s):
-   ```bash
-   npm run pacote
-   ```
-   Isso faz o build e cria o arquivo `site.zip` na pasta do projeto.
-5. **Envie para a Hostinger** (1 min): hPanel → **Arquivos → Gerenciador de Arquivos** → abra `public_html` → **Upload** do `site.zip` → clique com o botão direito no `site.zip` → **Extrair** (na própria `public_html`, substituindo os arquivos) → apague o `site.zip` de lá.
+   Escolha os 3 conteúdos (ex.: `2 5 9`), confirme a data, escreva variações de legenda se quiser, a missão do dia e responda `S` para gerar o `site.zip`.
+2. **Confira** (opcional, 30 s): `npm run dev` e abra http://localhost:8080.
+3. **Envie para a Hostinger** (1 min): hPanel → **Arquivos → Gerenciador de Arquivos** → abra `public_html` → **Upload** do `site.zip` → clique com o botão direito no `site.zip` → **Extrair** (na própria `public_html`, substituindo os arquivos) → apague o `site.zip` de lá.
 
 Pronto: o site já mostra os posts novos.
 
+O `site.zip` leva **só os arquivos novos ou alterados** desde o último pacote (vídeos de dias anteriores não são reenviados). Se um envio falhar ou a `public_html` for apagada, gere o site inteiro com `npm run pacote -- --completo`.
+
 **Dica:** prepare os posts de amanhã hoje à noite (com a data de amanhã). Eles ficam escondidos até o dia chegar, então dá para enviar o `site.zip` de uma vez.
+
+> Os vídeos do Pode Espalhar têm em geral 10–20 MB. Com 3 por dia, são ~50 MB/dia acumulando no `site.zip` e na hospedagem. De tempos em tempos, apague de `data/posts.json` e de `/media` os dias antigos que não precisam mais ficar no ar.
 
 ## 6. Deploy (Hostinger, Cloudflare Pages ou Netlify)
 

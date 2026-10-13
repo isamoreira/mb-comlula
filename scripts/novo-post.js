@@ -10,23 +10,9 @@ const readline = require('readline/promises');
 const { spawnSync } = require('child_process');
 const { tipoDaMidia, thumbDeImagem, thumbDeVideo, temFfmpeg } = require('./lib/midia');
 
-const RAIZ = path.join(__dirname, '..');
-const ARQ_POSTS = path.join(RAIZ, 'data/posts.json');
-const ARQ_CONFIG = path.join(RAIZ, 'data/config.json');
+const { RAIZ, ARQ_POSTS, ARQ_CONFIG, hojeSP, lerJson, salvarJson, proximoId, adicionarPost } = require('./lib/posts');
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-
-function hojeSP() {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-}
-
-function lerJson(arq) {
-  return JSON.parse(fs.readFileSync(arq, 'utf8'));
-}
-
-function salvarJson(arq, dados) {
-  fs.writeFileSync(arq, JSON.stringify(dados, null, 2) + '\n');
-}
 
 // Remove aspas que o Windows/Mac colocam ao arrastar um arquivo para o terminal.
 function limparCaminho(s) {
@@ -48,14 +34,6 @@ async function perguntar(texto, { padrao = '', obrigatorio = false, validar } = 
     }
     return r;
   }
-}
-
-// Próximo id livre para a data: AAAA-MM-DD-01, -02, ...
-function proximoId(posts, data) {
-  let n = 1;
-  const ids = new Set(posts.map((p) => p.id));
-  while (ids.has(`${data}-${String(n).padStart(2, '0')}`)) n++;
-  return `${data}-${String(n).padStart(2, '0')}`;
 }
 
 async function novoPost(posts, config) {
@@ -135,9 +113,7 @@ async function novoPost(posts, config) {
     source_url: fonte,
     credit: credito,
   };
-  posts.push(post);
-  posts.sort((a, b) => (a.date + a.id < b.date + b.id ? -1 : 1));
-  salvarJson(ARQ_POSTS, posts);
+  adicionarPost(posts, post);
   console.log(`✔ Post ${id} adicionado em data/posts.json`);
 }
 

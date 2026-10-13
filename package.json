@@ -7,12 +7,13 @@
     "build": "node build.js",
     "dev": "node dev.js",
     "start": "node build.js && node dev.js",
+    "importar": "node scripts/importar.js",
     "novo-post": "node scripts/novo-post.js",
+    "pacote": "node build.js && node scripts/pacote.js",
     "exemplos": "node scripts/gerar-exemplos.js",
     "test": "node build.js --exemplo && node test/smoke.js",
     "test:e2e": "node build.js --exemplo && node test/e2e.js",
-    "test:contador": "node test/contador.mjs",
-    "pacote": "node build.js && node scripts/pacote.js"
+    "test:contador": "node test/contador.mjs"
   },
   "engines": {
     "node": ">=18"

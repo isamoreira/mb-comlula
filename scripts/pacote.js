@@ -1,7 +1,10 @@
 // Compacta o conteúdo de dist/ em "site.zip", pronto para enviar à Hostinger
 // (Gerenciador de Arquivos → public_html → Upload → Extrair).
 // O zip leva o CONTEÚDO de dist/ (inclusive o .htaccess), não a pasta em si.
-// Uso: npm run pacote   (faz o build e gera o zip)
+// Uso: npm run pacote                 (faz o build e gera o zip só com o que mudou desde o último pacote)
+//      npm run pacote -- --completo    (zip com o site inteiro: use no primeiro envio ou se apagar a public_html)
+//
+// O registro do que já foi empacotado fica em .pacote-enviado.json (não vai para o site).
 'use strict';
 
 const fs = require('fs');
@@ -11,6 +14,8 @@ const zlib = require('zlib');
 const RAIZ = path.join(__dirname, '..');
 const DIST = path.join(RAIZ, 'dist');
 const SAIDA = path.join(RAIZ, 'site.zip');
+const REGISTRO = path.join(RAIZ, '.pacote-enviado.json');
+const COMPLETO = process.argv.includes('--completo');
 
 // CRC-32 (exigido pelo formato zip).
 const TABELA = new Uint32Array(256).map((_, n) => {
@@ -52,12 +57,21 @@ if (/localhost|podeespalhar\.com\.br/.test(ogUrl)) {
   process.exit(1);
 }
 
+// Só os arquivos novos ou alterados desde o último pacote (vídeos antigos não são reenviados).
+const crypto = require('crypto');
+const anterior = !COMPLETO && fs.existsSync(REGISTRO) ? JSON.parse(fs.readFileSync(REGISTRO, 'utf8')) : {};
+const atual = {};
+const arquivos = listar(DIST).filter((rel) => {
+  atual[rel] = crypto.createHash('sha1').update(fs.readFileSync(path.join(DIST, rel))).digest('hex');
+  return anterior[rel] !== atual[rel];
+});
+
 const partes = [];
 const central = [];
 let posicao = 0;
 const { hora, data } = horaDos(new Date());
 
-for (const rel of listar(DIST)) {
+for (const rel of arquivos) {
   const bruto = fs.readFileSync(path.join(DIST, rel));
   const comprimido = zlib.deflateRawSync(bruto, { level: 9 });
   // Imagens/vídeos já são comprimidos: guarda sem compressão se não ganhar nada.
@@ -106,6 +120,9 @@ fim.writeUInt32LE(tamanhoCentral, 12);
 fim.writeUInt32LE(posicao, 16);
 
 fs.writeFileSync(SAIDA, Buffer.concat([...partes, ...central, fim]));
+fs.writeFileSync(REGISTRO, JSON.stringify(atual, null, 1));
 const mb = (fs.statSync(SAIDA).size / 1024 / 1024).toFixed(1);
-console.log(`✔ ${path.basename(SAIDA)} criado (${central.length / 2} arquivos, ${mb} MB).`);
+const tipo = Object.keys(anterior).length ? 'só o que mudou desde o último pacote' : 'site completo';
+console.log(`✔ ${path.basename(SAIDA)} criado: ${central.length / 2} arquivos, ${mb} MB (${tipo}).`);
+if (Object.keys(anterior).length) console.log('  Se o envio anterior não chegou a ser feito (ou a public_html foi apagada), rode: npm run pacote -- --completo');
 console.log('  Hostinger: Gerenciador de Arquivos → public_html → Upload do site.zip → botão direito → Extrair.');

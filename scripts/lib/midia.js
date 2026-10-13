@@ -13,6 +13,8 @@ function carregarSharp() {
   if (sharpCache !== undefined) return sharpCache;
   try {
     sharpCache = require('sharp');
+    // Sem cache de arquivos: no Windows o cache deixa os arquivos "presos" e impede apagá-los.
+    sharpCache.cache(false);
   } catch (e) {
     sharpCache = null;
   }
