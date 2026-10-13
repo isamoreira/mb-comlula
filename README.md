@@ -5,7 +5,8 @@ Página simples, pensada para celular, onde voluntários veem **só os conteúdo
 - Sem login, sem cadastro, sem cookies, sem Google Analytics, sem rastreadores de terceiros.
 - Site estático (HTML + CSS + JavaScript puro), gerado por um script Node.js.
 - Pode ser "instalado" na tela inicial do celular (PWA).
-- Publicado em **https://podeespalhar.com.br** (Hostinger). Também funciona no Cloudflare Pages ou no Netlify.
+- Hospedado na Hostinger (também funciona no Cloudflare Pages ou no Netlify).
+- Os 3 conteúdos do dia são escolhidos no site Pode Espalhar (podeespalhar.com.br) e cadastrados aqui com `npm run novo-post`. O site não busca nada sozinho no Pode Espalhar: mostra só o que for cadastrado. Coloque o link do post original em "Link da fonte" e o crédito em "Crédito".
 
 ---
 
@@ -89,7 +90,7 @@ Páginas geradas:
 |---|---|
 | `project_name` | Nome no topo, na aba do navegador e no app instalado. |
 | `tagline` | Descrição curta (aparece na prévia do link da página inicial). |
-| `site_url` | **Endereço público do site** (hoje: `https://podeespalhar.com.br`). Usado nas meta tags de prévia, que exigem endereço completo. Pode ser sobrescrito pela variável de ambiente `SITE_URL`. |
+| `site_url` | **Endereço público do site** (o domínio do Espalha Hoje na Hostinger, **não** o do Pode Espalhar). Usado nas meta tags de prévia, que exigem endereço completo. Pode ser sobrescrito pela variável de ambiente `SITE_URL`. |
 | `primary_color` | Cor principal, formato `#RRGGBB`. A cor do texto sobre ela (branco ou preto) é escolhida automaticamente para manter o contraste. |
 | `logo` | Caminho de um logo (ex.: `media/logo.png` ou `.svg`, de preferência quadrado). Vazio = logo padrão. Os ícones do app são gerados a partir dele. |
 | `mission` | Texto da "Missão do dia", no topo da página inicial. |
@@ -164,7 +165,7 @@ Todo dia:
    Isso faz o build e cria o arquivo `site.zip` na pasta do projeto.
 5. **Envie para a Hostinger** (1 min): hPanel → **Arquivos → Gerenciador de Arquivos** → abra `public_html` → **Upload** do `site.zip` → clique com o botão direito no `site.zip` → **Extrair** (na própria `public_html`, substituindo os arquivos) → apague o `site.zip` de lá.
 
-Pronto: https://podeespalhar.com.br já mostra os posts novos.
+Pronto: o site já mostra os posts novos.
 
 **Dica:** prepare os posts de amanhã hoje à noite (com a data de amanhã). Eles ficam escondidos até o dia chegar, então dá para enviar o `site.zip` de uma vez.
 
@@ -172,17 +173,17 @@ Pronto: https://podeespalhar.com.br já mostra os posts novos.
 
 ### Antes de tudo
 
-`site_url` em `data/config.json` já está como `https://podeespalhar.com.br`. Se o endereço mudar, troque ali: ele é usado nas prévias dos links no WhatsApp/Facebook.
+Preencha `site_url` em `data/config.json` com o domínio do Espalha Hoje (ex.: `https://espalhahoje.com.br`). Ele é usado nas prévias dos links no WhatsApp/Facebook. O `npm run pacote` se recusa a gerar o zip enquanto ele estiver vazio.
 
-### Hostinger (o site oficial: podeespalhar.com.br)
+### Hostinger
 
 **Primeira vez:**
 
-1. No hPanel, confirme que o domínio `podeespalhar.com.br` está apontado para a hospedagem.
+1. No hPanel, confirme que o domínio do Espalha Hoje está apontado para a hospedagem.
 2. Em **Segurança → SSL**, ative o certificado SSL (gratuito) do domínio. O site exige HTTPS: sem ele, "Copiar legenda" e a lista de apps do celular não funcionam. O `.htaccess` já redireciona `http://` para `https://`.
 3. No **Gerenciador de Arquivos**, apague o que houver em `public_html` (por exemplo, o `default.php` de boas-vindas da Hostinger).
 4. Rode `npm run pacote`, envie o `site.zip` para `public_html` e extraia (passo 5 da seção anterior).
-5. Abra https://podeespalhar.com.br no celular e teste o "Compartilhar".
+5. Abra o site no celular e teste o "Compartilhar".
 
 O build gera um `.htaccess` (configuração do servidor Apache/LiteSpeed da Hostinger) com: página de erro 404, redirecionamento para HTTPS, a Content-Security-Policy (bloqueia scripts de terceiros), cache certo para `sw.js`/`posts.json` e `noindex` no `/admin-stats/`. Ele é um arquivo "oculto" (começa com ponto): o `site.zip` já o inclui. Se enviar os arquivos por FTP, confira se o `.htaccess` foi junto.
 
@@ -289,7 +290,7 @@ npx wrangler d1 create espalha-hoje             # mostra um "database_id"
 ```
 
 1. Copie o `database_id` para `worker/wrangler.toml` (no lugar de `COLE-AQUI-O-ID-DO-BANCO`).
-2. Em `worker/wrangler.toml`, troque `ALLOWED_ORIGIN = "*"` por `"https://podeespalhar.com.br"`.
+2. Em `worker/wrangler.toml`, troque `ALLOWED_ORIGIN = "*"` pelo endereço do Espalha Hoje (ex.: `"https://espalhahoje.com.br"`).
 3. Crie a tabela e publique:
 
    ```bash
@@ -306,7 +307,7 @@ npx wrangler d1 create espalha-hoje             # mostra um "database_id"
 
    (ou defina a variável de ambiente `COUNTER_ENDPOINT` no painel da hospedagem).
 5. Rode `npm run pacote` e envie o `site.zip` para a Hostinger. O build libera esse endereço na Content-Security-Policy automaticamente.
-6. Acesse `https://podeespalhar.com.br/admin-stats/#token=SEU_TOKEN`.
+6. Acesse `https://SEU-DOMINIO/admin-stats/#token=SEU_TOKEN`.
 
 O token é conferido pelo Worker (lido do segredo `ADMIN_TOKEN`); ele nunca fica no código do site. Use `#token=` (e não `?token=`), assim ele não aparece em logs de servidor. Para trocar o token, rode `npx wrangler secret put ADMIN_TOKEN` de novo.
 

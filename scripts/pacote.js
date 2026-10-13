@@ -44,6 +44,14 @@ if (!fs.existsSync(path.join(DIST, 'index.html'))) {
   process.exit(1);
 }
 
+// Sem o domínio certo, as prévias dos links no WhatsApp/Facebook ficariam quebradas.
+const ogUrl = (/og:url" content="([^"]*)"/.exec(fs.readFileSync(path.join(DIST, 'index.html'), 'utf8')) || [])[1] || '';
+if (/localhost|podeespalhar\.com\.br/.test(ogUrl)) {
+  console.error(`\n✖ O endereço do site está como "${ogUrl}".`);
+  console.error('  Preencha "site_url" em data/config.json com o domínio do Espalha Hoje (ex.: https://espalhahoje.com.br) e rode de novo.\n');
+  process.exit(1);
+}
+
 const partes = [];
 const central = [];
 let posicao = 0;
