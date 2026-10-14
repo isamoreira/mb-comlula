@@ -113,6 +113,7 @@ npm run importar
 2. Confirme a data em que eles aparecem no Espalha Hoje (Enter = hoje) e, se quiser, hashtags.
 3. Para cada conteúdo, o importador:
    - baixa o **vídeo ou imagem original** e a capa para `/media` (o site não depende do servidor do Pode Espalhar);
+   - **deixa o vídeo leve para celular**: vídeos acima de 15 MB são convertidos para 720p (ex.: 65 MB → 9,5 MB, sem perda visível na tela do celular). Vídeos muito grandes travam o envio pela lista de apps (o Chrome do Android recusa arquivos acima de ~50 MB). Para vídeos já importados: `npm run otimizar`;
    - preenche título, legenda, tema (a campanha), link da fonte e crédito "Pode Espalhar";
    - pergunta por **variações de legenda** (opcional, mas recomendado: com 2 ou 3 variações aparece o botão "Trocar legenda" e evita texto idêntico em muitas contas). Enter vazio pula.
 4. No final: missão do dia e geração do `site.zip`.

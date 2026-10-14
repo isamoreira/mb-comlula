@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const readline = require('readline/promises');
 const { spawnSync } = require('child_process');
-const { tipoDaMidia, thumbDeImagem, thumbDeVideo, temFfmpeg } = require('./lib/midia');
+const { tipoDaMidia, thumbDeImagem, thumbDeVideo, temFfmpeg, otimizarVideo } = require('./lib/midia');
 
 const { RAIZ, ARQ_POSTS, ARQ_CONFIG, hojeSP, lerJson, salvarJson, proximoId, adicionarPost } = require('./lib/posts');
 
@@ -100,10 +100,18 @@ async function novoPost(posts, config) {
   // Copia a mídia e gera a thumb.
   const id = proximoId(posts, data);
   const ext = path.extname(origem).toLowerCase();
-  const arquivo = `media/${id}${ext}`;
+  let arquivo = `media/${id}${ext}`;
   const thumb = `media/${id}-thumb.jpg`;
   fs.mkdirSync(path.join(RAIZ, 'media'), { recursive: true });
   fs.copyFileSync(origem, path.join(RAIZ, arquivo));
+  if (tipo === 'video') {
+    process.stdout.write('Deixando o vídeo leve para celular… ');
+    const o = otimizarVideo(path.join(RAIZ, arquivo));
+    if (o) {
+      arquivo = path.relative(RAIZ, o.arquivo).split(path.sep).join('/');
+      console.log(`${(o.antes / 1024 / 1024).toFixed(1)} MB → ${(o.depois / 1024 / 1024).toFixed(1)} MB`);
+    } else console.log('já está leve.');
+  }
   process.stdout.write('Gerando thumb… ');
   if (tipo === 'image') await thumbDeImagem(path.join(RAIZ, arquivo), path.join(RAIZ, thumb));
   else if (capa) await thumbDeImagem(capa, path.join(RAIZ, thumb));

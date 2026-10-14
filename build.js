@@ -63,6 +63,9 @@ function validarPosts() {
       if (!p.media.file || !fs.existsSync(path.join(BASE, p.media.file))) erros.push(`${onde}: arquivo de mídia não encontrado: ${p.media.file}`);
       if (p.media.thumb && !fs.existsSync(path.join(BASE, p.media.thumb))) erros.push(`${onde}: thumb não encontrada: ${p.media.thumb}`);
       if (p.media.type === 'video' && !p.media.thumb) erros.push(`${onde}: vídeos precisam de "media.thumb" (imagem de capa).`);
+      const arq = p.media.file && path.join(BASE, p.media.file);
+      if (p.media.type === 'video' && arq && fs.existsSync(arq) && fs.statSync(arq).size > 45 * 1024 * 1024)
+        avisos.push(`${onde}: vídeo de ${(fs.statSync(arq).size / 1048576).toFixed(0)} MB. Celulares não conseguem enviar arquivos tão grandes: rode "npm run otimizar".`);
     }
     if (p.hashtags && !Array.isArray(p.hashtags)) erros.push(`${onde}: "hashtags" deve ser uma lista.`);
     if (Array.isArray(p.hashtags) && p.hashtags.length > 5)

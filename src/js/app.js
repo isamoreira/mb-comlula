@@ -363,7 +363,11 @@
       return;
     }
     toast(post.media.type === 'video' ? 'Escolha "Salvar vídeo" na lista.' : 'Escolha "Salvar imagem" na lista.');
-    navigator.share(dados).catch(function () {});
+    navigator.share(dados).catch(function (erro) {
+      if (erro && erro.name === 'AbortError') return;
+      // Se a lista de apps recusar, abre o arquivo direto (download comum).
+      location.href = '/' + post.media.file;
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -533,10 +537,14 @@
     toast(app === 'nativo' ? 'Legenda copiada! Escolha o app na lista.' : 'Legenda copiada! Escolha o ' + nome + ' na lista.');
     navigator.share(dados).catch(function (erro) {
       if (erro && erro.name === 'AbortError') return; // pessoa cancelou
-      if (erro && erro.name === 'NotAllowedError') {
+      // "NotAllowedError": o celular recusou. Pode ser o toque que "expirou" (aí tocar de novo resolve)
+      // ou o arquivo grande demais para a lista de apps (aí não adianta insistir).
+      if (erro && erro.name === 'NotAllowedError' && !item.recusado) {
+        item.recusado = true;
         toast('Toque de novo em ' + nome + '.');
         return;
       }
+      toast('O celular não deixou enviar direto. Salve no celular e poste pelo ' + (app === 'nativo' ? 'app' : nome) + '.');
       mostrarPassos();
     });
   }

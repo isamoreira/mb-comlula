@@ -20,7 +20,7 @@ const readline = require('readline/promises');
 const { Readable } = require('stream');
 const { pipeline } = require('stream/promises');
 const { spawnSync } = require('child_process');
-const { thumbDeImagem } = require('./lib/midia');
+const { thumbDeImagem, otimizarVideo } = require('./lib/midia');
 const { RAIZ, ARQ_POSTS, ARQ_CONFIG, hojeSP, lerJson, salvarJson, proximoId, adicionarPost } = require('./lib/posts');
 
 const API = 'https://podeespalhar.com.br/wp-json/wp/v2';
@@ -211,7 +211,7 @@ async function importar(c, data, posts, config, hashtagsGerais) {
 
   const id = proximoId(posts, data);
   const ext = (path.extname(new URL(m.arquivo).pathname) || (m.tipo === 'video' ? '.mp4' : '.jpg')).toLowerCase();
-  const arquivo = `media/${id}${ext}`;
+  let arquivo = `media/${id}${ext}`;
   const thumb = `media/${id}-thumb.jpg`;
   fs.mkdirSync(path.join(RAIZ, 'media'), { recursive: true });
 
@@ -222,6 +222,16 @@ async function importar(c, data, posts, config, hashtagsGerais) {
     process.stdout.write(`  Baixando ${m.tipo === 'video' ? 'vídeo' : 'imagem'}… `);
     bytes = await baixar(m.arquivo, path.join(RAIZ, arquivo));
     console.log(`${(bytes / 1024 / 1024).toFixed(1)} MB`);
+    if (m.tipo === 'video') {
+      // Vídeos grandes (60–100 MB) travam o envio pelo celular: converte para 720p (~10–25 MB).
+      process.stdout.write('  Deixando o vídeo leve para celular… ');
+      const o = otimizarVideo(path.join(RAIZ, arquivo));
+      if (o) {
+        arquivo = path.relative(RAIZ, o.arquivo).split(path.sep).join('/');
+        bytes = o.depois;
+        console.log(`${(o.antes / 1024 / 1024).toFixed(1)} MB → ${(o.depois / 1024 / 1024).toFixed(1)} MB`);
+      } else console.log('já está leve.');
+    }
 
     process.stdout.write('  Gerando thumb… ');
     if (m.tipo === 'image') {
@@ -277,7 +287,7 @@ async function importar(c, data, posts, config, hashtagsGerais) {
   };
   adicionarPost(posts, post);
   console.log(`  ✔ Adicionado como ${id}`);
-  if (bytes > 25 * 1024 * 1024) console.log('  ⚠ Arquivo acima de 25 MB: na Hostinger tudo bem, mas não caberia no Cloudflare Pages.');
+  if (bytes > 45 * 1024 * 1024) console.log('  ⚠ Vídeo ainda acima de 45 MB: alguns celulares não conseguem enviar pela lista de apps (só salvando).');
   return post;
 }
 

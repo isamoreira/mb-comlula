@@ -9,6 +9,7 @@
     "start": "node build.js && node dev.js",
     "importar": "node scripts/importar.js",
     "novo-post": "node scripts/novo-post.js",
+    "otimizar": "node scripts/otimizar.js",
     "pacote": "node build.js && node scripts/pacote.js",
     "conferir": "node build.js && node scripts/conferir.js",
     "exemplos": "node scripts/gerar-exemplos.js",
@@ -20,6 +21,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "ffmpeg-static": "^5.3.0",
     "sharp": "^0.34.0"
   },
   "devDependencies": {

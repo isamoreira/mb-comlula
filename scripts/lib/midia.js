@@ -94,19 +94,78 @@ async function thumbDeImagem(origem, destino) {
   return destino;
 }
 
-// Verifica se o ffmpeg está disponível no PATH.
+// Caminho do ffmpeg: o do pacote "ffmpeg-static" (vem com o npm install) ou o instalado no sistema.
+let ffmpegCache;
+function caminhoFfmpeg() {
+  if (ffmpegCache !== undefined) return ffmpegCache;
+  const candidatos = [];
+  try {
+    candidatos.push(require('ffmpeg-static'));
+  } catch (e) {}
+  candidatos.push('ffmpeg');
+  ffmpegCache = candidatos.find((c) => c && spawnSync(c, ['-version'], { stdio: 'ignore' }).status === 0) || null;
+  return ffmpegCache;
+}
+
 function temFfmpeg() {
-  const r = spawnSync('ffmpeg', ['-version'], { stdio: 'ignore' });
-  return r.status === 0;
+  return !!caminhoFfmpeg();
 }
 
 // Thumb de vídeo: tenta extrair um quadro com ffmpeg; senão, gera um cartaz.
 async function thumbDeVideo(origem, destino, { titulo = 'Vídeo', cor } = {}) {
-  if (temFfmpeg()) {
-    const r = spawnSync('ffmpeg', ['-y', '-ss', '1', '-i', origem, '-frames:v', '1', '-vf', 'scale=720:-2', '-q:v', '4', destino], { stdio: 'ignore' });
+  const ffmpeg = caminhoFfmpeg();
+  if (ffmpeg) {
+    const r = spawnSync(ffmpeg, ['-y', '-ss', '1', '-i', origem, '-frames:v', '1', '-vf', 'scale=720:-2', '-q:v', '4', destino], { stdio: 'ignore' });
     if (r.status === 0 && fs.existsSync(destino)) return destino;
   }
   return gerarCartaz(destino, { largura: 720, altura: 1280, cor, titulo, subtitulo: '▶ Vídeo' });
 }
 
-module.exports = { carregarSharp, tipoDaMidia, svgCartaz, gerarCartaz, thumbDeImagem, thumbDeVideo, temFfmpeg, EXT_VIDEO, EXT_IMAGEM };
+// Vídeos acima disso são convertidos para o tamanho de celular.
+const LIMITE_VIDEO = 15 * 1024 * 1024;
+
+/**
+ * Deixa o vídeo leve para celular: lado maior com no máximo 1280px (720p), H.264 + AAC,
+ * pronto para começar a tocar antes de baixar tudo. Vídeos de 60–100 MB viram ~10–25 MB.
+ * Substitui o arquivo só se o resultado for menor. Retorna { antes, depois } em bytes,
+ * ou null se não precisou/não deu (sem ffmpeg).
+ */
+function otimizarVideo(arquivo) {
+  const antes = fs.statSync(arquivo).size;
+  if (antes <= LIMITE_VIDEO) return null;
+  const ffmpeg = caminhoFfmpeg();
+  if (!ffmpeg) return null;
+  const temp = arquivo.replace(/(\.\w+)$/, '-otimizando.mp4');
+  const r = spawnSync(
+    ffmpeg,
+    [
+      '-y', '-i', arquivo,
+      '-vf', "scale=w='if(gte(iw,ih),min(1280,iw),-2)':h='if(gte(iw,ih),-2,min(1280,ih))'",
+      '-c:v', 'libx264', '-preset', 'medium', '-crf', '26', '-maxrate', '2500k', '-bufsize', '5000k',
+      '-profile:v', 'high', '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac', '-b:a', '128k', '-ac', '2',
+      '-movflags', '+faststart',
+      temp,
+    ],
+    { stdio: 'ignore' }
+  );
+  if (r.status !== 0 || !fs.existsSync(temp)) {
+    fs.rmSync(temp, { force: true });
+    return null;
+  }
+  const depois = fs.statSync(temp).size;
+  if (depois >= antes) {
+    fs.rmSync(temp, { force: true });
+    return null;
+  }
+  // O vídeo final é sempre .mp4.
+  const destino = arquivo.replace(/\.\w+$/, '.mp4');
+  fs.rmSync(arquivo, { force: true });
+  fs.renameSync(temp, destino);
+  return { antes, depois, arquivo: destino };
+}
+
+module.exports = {
+  carregarSharp, tipoDaMidia, svgCartaz, gerarCartaz, thumbDeImagem, thumbDeVideo, temFfmpeg, otimizarVideo, LIMITE_VIDEO,
+  EXT_VIDEO, EXT_IMAGEM,
+};

@@ -244,6 +244,23 @@ async function teste(nome, fn) {
     await p2.close();
   });
 
+  await teste('celular recusa o arquivo: 1º toque pede "toque de novo", 2º mostra salvar + colar', async () => {
+    const p2 = await paginaCelular(async (p) => {
+      await p.evaluateOnNewDocument(() => {
+        navigator.share = () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError'));
+      });
+    });
+    await p2.click('.card [data-acao="compartilhar"]');
+    await esperarPronto(p2);
+    await p2.click('#painel [data-app="instagram"]');
+    await p2.waitForFunction(() => /Toque de novo/.test(document.getElementById('toast').textContent));
+    await p2.click('#painel [data-app="instagram"]');
+    await p2.waitForSelector('#painel [data-passos]:not([hidden])');
+    const t = await p2.$eval('#toast', (e) => e.textContent);
+    assert.ok(/Salve no celular/.test(t), t);
+    await p2.close();
+  });
+
   await teste('"Salvar no celular" abre a lista com SÓ o arquivo (para "Salvar vídeo/imagem")', async () => {
     const p2 = await paginaCelular();
     await p2.click('.card [data-acao="baixar"]'); // 1º toque: começa a preparar
