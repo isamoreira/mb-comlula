@@ -10,6 +10,8 @@ var CACHE_SHELL = 'eh-shell-' + VERSAO;
 var CACHE_MIDIA = 'eh-midia-v1';
 var ARQUIVOS_SHELL = __ARQUIVOS__;
 var MAX_MIDIAS = 60;
+// Pasta do site (ex.: "/mb-comlula/" no GitHub Pages), tirada do escopo do service worker.
+var BASE = new URL(self.registration.scope).pathname;
 
 self.addEventListener('install', function (ev) {
   ev.waitUntil(
@@ -99,7 +101,7 @@ function redePrimeiro(req) {
     })
     .catch(function () {
       return caches.match(req, { ignoreSearch: req.mode === 'navigate' }).then(function (r) {
-        return r || caches.match('/');
+        return r || caches.match(BASE);
       });
     });
 }
@@ -126,12 +128,11 @@ self.addEventListener('fetch', function (ev) {
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // nada de terceiros
-  if (url.pathname.indexOf('/api/') === 0) return; // contador: sempre direto do servidor
   if (/\.(mp4|webm|mov|m4v)$/i.test(url.pathname)) return; // vídeos: direto da rede
 
-  if (req.mode === 'navigate' || url.pathname === '/data/posts.json') {
+  if (req.mode === 'navigate' || url.pathname === BASE + 'data/posts.json') {
     ev.respondWith(redePrimeiro(req));
-  } else if (url.pathname.indexOf('/media/') === 0 || url.pathname.indexOf('/og/') === 0) {
+  } else if (url.pathname.indexOf(BASE + 'media/') === 0 || url.pathname.indexOf(BASE + 'og/') === 0) {
     ev.respondWith(cachePrimeiro(req));
   } else {
     ev.respondWith(

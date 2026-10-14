@@ -1,11 +1,11 @@
 {
   "project_name": "Espalha Hoje",
   "tagline": "Os conteúdos do dia, prontos para compartilhar.",
-  "site_url": "https://darkslategrey-squid-814313.hostingersite.com",
+  "site_url": "https://isamoreira.github.io/mb-comlula",
   "primary_color": "#C4122F",
   "logo": "",
   "mission": "Compartilhe os 3 posts de hoje em pelo menos 2 redes e mande para 3 grupos de família ou amigos.",
   "footer_identification": "Este site é uma atividade coletiva de um grupo.",
   "default_credit": "Pode Espalhar (podeespalhar.com.br)",
-  "counter_endpoint": "/api/contador.php"
+  "counter_endpoint": ""
 }

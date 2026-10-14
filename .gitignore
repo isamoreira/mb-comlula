@@ -13,3 +13,4 @@ dist-teste/
 media/*
 !media/.gitkeep
 site.zip
+.publicar/

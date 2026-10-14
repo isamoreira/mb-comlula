@@ -5,7 +5,7 @@ Página simples, pensada para celular, onde voluntários veem **só os conteúdo
 - Sem login, sem cadastro, sem cookies, sem Google Analytics, sem rastreadores de terceiros.
 - Site estático (HTML + CSS + JavaScript puro), gerado por um script Node.js.
 - Pode ser "instalado" na tela inicial do celular (PWA).
-- Hospedado na Hostinger (também funciona no Cloudflare Pages ou no Netlify).
+- Publicado no **GitHub Pages**: https://isamoreira.github.io/mb-comlula/ (gratuito).
 - Os 3 conteúdos do dia vêm do **Pode Espalhar** (podeespalhar.com.br): o comando `npm run importar` lista os conteúdos mais recentes pela API pública deles, você escolhe 3 e ele baixa tudo. O site só mostra o que for importado; nada é publicado sem alguém escolher.
 
 ---
@@ -17,12 +17,12 @@ Página simples, pensada para celular, onde voluntários veem **só os conteúdo
 3. [Configuração (`data/config.json`)](#3-configuração-dataconfigjson)
 4. [Adicionar posts](#4-adicionar-posts)
 5. [Publicar os 3 posts do dia em menos de 5 minutos](#5-publicar-os-3-posts-do-dia-em-menos-de-5-minutos)
-6. [Deploy (Hostinger, Cloudflare Pages ou Netlify)](#6-deploy-hostinger-cloudflare-pages-ou-netlify)
+6. [Publicação no GitHub Pages](#6-publicação-no-github-pages)
 7. [Como o compartilhamento funciona em cada rede](#7-como-o-compartilhamento-funciona-em-cada-rede)
 8. [Testes](#8-testes)
 9. [Privacidade e conformidade](#9-privacidade-e-conformidade)
 10. [Problemas comuns](#10-problemas-comuns)
-11. [Contador de compartilhamentos e "Veja os números"](#11-contador-de-compartilhamentos-e-veja-os-números)
+11. [Contador de compartilhamentos e "Veja os números" (Google Planilhas)](#11-contador-de-compartilhamentos-e-veja-os-números-google-planilhas)
 
 ---
 
@@ -44,12 +44,14 @@ Atalho: `npm start` faz o build e já abre o servidor.
 
 ## 2. Estrutura de pastas
 
-> **As mídias (`/media`) não vão para o GitHub**: ficam no seu computador e na Hostinger (e podem ser baixadas de novo do Pode Espalhar com `npm run importar`). Quem clonar o repositório recebe o código e a lista de posts; para gerar o site, precisa importar as mídias de novo.
+> **As mídias (`/media`) não vão para o ramo `main` do GitHub** (o do código): ficam no seu computador e no ramo `gh-pages`, junto com o site publicado (`npm run publicar`). Podem ser baixadas de novo do Pode Espalhar com `npm run importar`.
 
 ```
 ├── build.js                 # gera o site em /dist a partir de /data e /media
 ├── dev.js                   # servidor local (npm run dev)
 ├── netlify.toml             # configuração do Netlify
+├── contador-google/
+│   └── Codigo.gs            # contador (Google Apps Script + planilha)
 ├── data/
 │   ├── config.json          # nome, cor, logo, missão do dia, rodapé...
 │   └── posts.json           # os posts (todos os dias)
@@ -58,13 +60,14 @@ Atalho: `npm start` faz o build e já abre o servidor.
 │   ├── importar.js          # importa do Pode Espalhar (npm run importar)
 │   ├── novo-post.js         # cadastro manual de um post (npm run novo-post)
 │   ├── gerar-exemplos.js    # gera as imagens de exemplo dos testes (npm run exemplos)
-│   ├── pacote.js            # gera o site.zip para a Hostinger (npm run pacote)
+│   ├── publicar.js          # publica no GitHub Pages (npm run publicar)
+│   ├── conferir.js          # confere se o site publicado está completo (npm run conferir)
+│   ├── otimizar.js          # deixa vídeos leves para celular (npm run otimizar)
 │   └── lib/                 # funções compartilhadas (mídia, posts)
 ├── src/
 │   ├── css/style.css        # estilos (mobile-first, claro/escuro automático)
 │   ├── js/app.js            # cards, painel de compartilhar, cópia, Web Share API
 │   ├── js/share.js          # monta as URLs de cada rede (com UTM)
-│   ├── api/contador.php     # contador de compartilhamentos (PHP, roda na Hostinger)
 │   └── sw.js                # service worker (PWA / offline)
 ├── test/
 │   ├── smoke.js             # testes rápidos (URLs e meta tags)
@@ -90,13 +93,13 @@ Páginas geradas:
 |---|---|
 | `project_name` | Nome no topo, na aba do navegador e no app instalado. |
 | `tagline` | Descrição curta (aparece na prévia do link da página inicial). |
-| `site_url` | **Endereço público do site** (o domínio do Espalha Hoje na Hostinger, **não** o do Pode Espalhar). Usado nas meta tags de prévia, que exigem endereço completo. Pode ser sobrescrito pela variável de ambiente `SITE_URL`. |
+| `site_url` | **Endereço público do site** (`https://isamoreira.github.io/mb-comlula`, **não** o do Pode Espalhar). Usado nas meta tags de prévia, que exigem endereço completo, e para saber a "pasta" do site (`/mb-comlula/`). Pode ser sobrescrito pela variável de ambiente `SITE_URL`. |
 | `primary_color` | Cor principal, formato `#RRGGBB`. A cor do texto sobre ela (branco ou preto) é escolhida automaticamente para manter o contraste. |
 | `logo` | Caminho de um logo (ex.: `media/logo.png` ou `.svg`, de preferência quadrado). Vazio = logo padrão. Os ícones do app são gerados a partir dele. |
 | `mission` | Texto da "Missão do dia", no topo da página inicial. |
 | `footer_identification` | Texto livre sempre exibido no rodapé (ex.: quem produz o material, CNPJ quando aplicável). |
 | `default_credit` | Crédito usado quando o post não tem `credit`. |
-| `counter_endpoint` | Endereço do contador (`/api/contador.php`). Vazio = desligado. |
+| `counter_endpoint` | Endereço do contador no Google Apps Script (termina em `/exec`, veja a seção 11). Vazio = desligado. |
 
 ## 4. Adicionar posts
 
@@ -116,7 +119,7 @@ npm run importar
    - **deixa o vídeo leve para celular**: vídeos acima de 15 MB são convertidos para 720p (ex.: 65 MB → 9,5 MB, sem perda visível na tela do celular). Vídeos muito grandes travam o envio pela lista de apps (o Chrome do Android recusa arquivos acima de ~50 MB). Para vídeos já importados: `npm run otimizar`;
    - preenche título, legenda, tema (a campanha), link da fonte e crédito "Pode Espalhar";
    - pergunta por **variações de legenda** (opcional, mas recomendado: com 2 ou 3 variações aparece o botão "Trocar legenda" e evita texto idêntico em muitas contas). Enter vazio pula.
-4. No final: missão do dia e geração do `site.zip`.
+4. No final: missão do dia e **publicação** no GitHub Pages.
 
 Se você importar o mesmo conteúdo duas vezes para o mesmo dia, ele é pulado. Para automatizar: `npm run importar -- --ids=2219220,2218993,2216484 --data=2026-10-14 --sim` (ids do Pode Espalhar; `--sim` aceita os padrões).
 
@@ -170,76 +173,60 @@ Vídeos: se o [ffmpeg](https://ffmpeg.org) estiver instalado, a capa é tirada d
 
 ## 5. Publicar os 3 posts do dia em menos de 5 minutos
 
-Todo dia:
+Todo dia, no terminal do VS Code, na pasta do projeto:
 
 1. **Importe e escolha** (2–3 min):
    ```bash
    npm run importar
    ```
-   Escolha os 3 conteúdos (ex.: `2 5 9`), confirme a data, escreva variações de legenda se quiser, a missão do dia e responda `S` para gerar o `site.zip`.
-2. **Confira** (opcional, 30 s): `npm run dev` e abra http://localhost:8080.
-3. **Envie para a Hostinger** (1 min): hPanel → **Arquivos → Gerenciador de Arquivos** → abra `public_html` → **Upload** do `site.zip` → clique com o botão direito no `site.zip` → **Extrair** (na própria `public_html`, substituindo os arquivos) → apague o `site.zip` de lá.
-4. **Confira** (10 s): `npm run conferir`. Ele verifica no site publicado se todos os arquivos estão lá (inclusive os vídeos) e se o contador responde. Se faltar algo, rode `npm run pacote` de novo: o zip já inclui o que estiver faltando.
+   Escolha os 3 conteúdos (ex.: `2 5 9`), confirme a data, hashtags (até 5) e, no final, responda `S` para **publicar**.
+2. **Confira** (10 s, depois de 1–2 minutos):
+   ```bash
+   npm run conferir
+   ```
+   Ele verifica no site publicado se todos os arquivos estão lá (inclusive os vídeos) e se o contador responde.
+3. **Guarde a lista de posts no GitHub** (opcional, cópia de segurança):
+   ```bash
+   git add -A
+   git commit -m "Posts de 14/10"
+   git push
+   ```
 
-Pronto: o site já mostra os posts novos.
+**Dica:** prepare os posts de amanhã hoje à noite (com a data de amanhã). Eles ficam escondidos até o dia chegar.
 
-O `site.zip` tem sempre o **site inteiro**: pode extrair por cima dos arquivos da `public_html` ou trocar a pasta inteira por ele, os dois funcionam. (Os números do contador ficam fora da `public_html` e não são afetados.) Opção avançada: `npm run pacote -- --so-mudancas` gera um zip só com o que falta ou mudou no servidor; nesse caso, **nunca** apague a `public_html` antes de extrair.
+> Os vídeos do Pode Espalhar são convertidos para 720p (em geral 10–25 MB). Com 3 por dia, o site cresce ~50 MB/dia. O GitHub Pages aceita sites de até 1 GB: de tempos em tempos, apague de `data/posts.json` e de `/media` os dias antigos que não precisam mais ficar no ar.
 
-**Dica:** prepare os posts de amanhã hoje à noite (com a data de amanhã). Eles ficam escondidos até o dia chegar, então dá para enviar o `site.zip` de uma vez.
+## 6. Publicação no GitHub Pages
 
-> Os vídeos do Pode Espalhar têm em geral 10–20 MB. Com 3 por dia, são ~50 MB/dia acumulando no `site.zip` e na hospedagem. De tempos em tempos, apague de `data/posts.json` e de `/media` os dias antigos que não precisam mais ficar no ar.
+O site fica em **https://isamoreira.github.io/mb-comlula/** (gratuito).
 
-## 6. Deploy (Hostinger, Cloudflare Pages ou Netlify)
+### Como funciona
 
-### Antes de tudo
+`npm run publicar` gera o site (`dist/`) e envia para o ramo **`gh-pages`** deste repositório:
+- cada publicação substitui a anterior por um único commit (os vídeos de dias antigos não se acumulam no histórico);
+- fotos e vídeos que já estão no GitHub não são reenviados;
+- o código e a lista de posts continuam no ramo `main` (onde as mídias não entram).
 
-O site precisa saber o próprio endereço (usado nas prévias dos links no WhatsApp/Facebook). Não é preciso comprar domínio: serve o endereço gratuito que a Hostinger dá ao site (algo como `https://palavra-aleatoria.hostingersite.com`, visível no hPanel em **Sites**). Na primeira vez que você rodar `npm run pacote`, ele pergunta esse endereço e guarda em `site_url` (`data/config.json`). Se um dia trocar de endereço, edite esse campo.
+Na hora de enviar, o Windows pode abrir a janela de login do GitHub: é só entrar e autorizar.
 
-### Hostinger
+### Primeira vez (uma vez só)
 
-**Primeira vez:**
+1. Rode `npm run publicar`.
+2. No GitHub: repositório **mb-comlula → Settings → Pages**.
+3. Em **Build and deployment**: Source **"Deploy from a branch"**, Branch **`gh-pages`**, pasta **`/ (root)`** → **Save**.
+4. Em 1–2 minutos o site abre no endereço acima. Rode `npm run conferir`.
 
-1. No hPanel, crie o site (pode usar o domínio temporário/gratuito que a Hostinger oferece) e copie o endereço dele.
-2. Confira em **Segurança → SSL** se o certificado SSL (gratuito) está ativo para esse endereço. O site exige HTTPS: sem ele, "Copiar legenda" e a lista de apps do celular não funcionam. O `.htaccess` já redireciona `http://` para `https://`.
-3. No **Gerenciador de Arquivos**, apague o que houver em `public_html` (por exemplo, o `default.php` de boas-vindas da Hostinger).
-4. Rode `npm run pacote` (na primeira vez ele pede o endereço do passo 1), envie o `site.zip` para `public_html` e extraia (passo 3 da seção anterior).
-5. Abra o site no celular e teste o "Compartilhar".
+### Endereço do site
 
-O build gera um `.htaccess` (configuração do servidor Apache/LiteSpeed da Hostinger) com: página de erro 404, redirecionamento para HTTPS, a Content-Security-Policy (bloqueia scripts de terceiros), cache certo para `sw.js`/`posts.json`. Ele é um arquivo "oculto" (começa com ponto): o `site.zip` já o inclui. Se enviar os arquivos por FTP, confira se o `.htaccess` foi junto.
+`site_url` em `data/config.json` está como `https://isamoreira.github.io/mb-comlula`. Ele é usado nas prévias dos links (WhatsApp/Facebook) e define a "pasta" do site (`/mb-comlula/`). Se o repositório mudar de nome ou o site ganhar um domínio próprio, troque esse campo e publique de novo.
 
-> Se algum dia o site mostrar "Erro 500" logo depois de um envio, renomeie `public_html/.htaccess` para `.htaccess-off` e me avise. Isso aponta para alguma diretiva que o servidor não aceitou. O site volta a funcionar sem ele, só perde os cabeçalhos de segurança.
+### Segurança sem `.htaccess`
 
+O GitHub Pages não permite configurar cabeçalhos HTTP. Por isso a política que bloqueia scripts de terceiros (Content-Security-Policy) também vai dentro de cada página, numa `<meta>`. Os arquivos `_headers` e `.htaccess` continuam sendo gerados, caso o site um dia volte para Cloudflare Pages, Netlify ou uma hospedagem Apache.
 
-### Cloudflare Pages
+### Outras hospedagens
 
-**Opção 1 — conectado ao GitHub/GitLab (recomendado, publica a cada push)**
-
-1. Suba este projeto para um repositório (pode ser privado).
-2. No painel da Cloudflare: **Workers & Pages → Create → Pages → Connect to Git** e escolha o repositório.
-3. Configure:
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-   - Variáveis de ambiente: `NODE_VERSION` = `20` e (opcional) `SITE_URL` = `https://seu-endereco.pages.dev`
-4. Salve. O site fica em `https://<projeto>.pages.dev` (dá para ligar um domínio próprio em **Custom domains**).
-
-**Opção 2 — upload direto (sem Git)**
-
-```bash
-npm run build
-npx wrangler pages deploy dist --project-name espalha-hoje
-```
-
-> Limite do Cloudflare Pages: **25 MB por arquivo**. Comprima vídeos maiores (ex.: HandBrake, preset "Fast 720p30") ou use o Netlify.
-
-### Netlify
-
-**Opção 1 — conectado ao Git:** **Add new site → Import an existing project**, escolha o repositório. O arquivo `netlify.toml` já define build (`npm run build`) e pasta (`dist`). O Netlify informa o endereço do site ao build automaticamente; para um domínio próprio, defina `SITE_URL`.
-
-**Opção 2 — arrastar e soltar:** rode `npm run build` e arraste a pasta `dist` para https://app.netlify.com/drop.
-
-**Opção 3 — linha de comando:** `npx netlify-cli deploy --prod --dir dist`.
-
-Os cabeçalhos de segurança (`dist/_headers`: Content-Security-Policy, sem cache para `sw.js` e `posts.json` etc.) funcionam nesses dois serviços. Na Hostinger, quem faz isso é o `dist/.htaccess`.
+O conteúdo de `dist/` funciona em qualquer hospedagem de site estático (Cloudflare Pages, Netlify, Hostinger…): ajuste `site_url` para o novo endereço, rode `npm run build` e envie a pasta `dist/`.
 
 ## 7. Como o compartilhamento funciona em cada rede
 
@@ -274,7 +261,7 @@ npm run test:e2e       # abre o site no Chrome em tela de 390px e testa tudo
 npm run test:contador  # contador PHP + página /numeros/ (precisa do PHP em WebAssembly, veja o topo de test/contador.mjs)
 ```
 
-Os testes usam os 3 posts de exemplo de `test/fixture/` e geram o site de teste em `dist-teste/`. O `dist/` e o `site.zip` reais nunca são tocados pelos testes.
+Os testes usam os 3 posts de exemplo de `test/fixture/` e geram o site de teste em `dist-teste/`. O `dist/` real nunca é tocado pelos testes.
 
 O teste e2e usa o Chrome ou Edge instalado (se não achar, defina `CHROME_PATH`). Ele verifica: posts do dia, aviso de dia anterior, posts futuros escondidos, botões ≥ 48px, ausência de rolagem horizontal, "Trocar legenda", "Copiar legenda", URL de cada rede, fallback do Instagram, Web Share com arquivo, modo escuro, meta tags OG e as páginas de arquivo/privacidade. As capturas de tela ficam em `test/screenshots/`.
 
@@ -294,37 +281,49 @@ Para conferir a prévia real depois do deploy: [Facebook Sharing Debugger](https
 - **Mudei o site mas o celular mostra a versão antiga:** o app instalado atualiza sozinho na próxima abertura (o service worker busca a nova versão). Feche e abra de novo.
 - **Erro no build:** leia a mensagem — ela indica o post e o campo com problema.
 
-## 11. Contador de compartilhamentos e "Veja os números"
+## 11. Contador de compartilhamentos e "Veja os números" (Google Planilhas)
 
-O contador roda na **própria Hostinger** (arquivo `api/contador.php`, que vai junto no `site.zip`). Não precisa de conta nem serviço extra.
+O contador é um pequeno programa em JavaScript que roda no **Google Apps Script**, na sua conta Google, e guarda os números numa **planilha**. O código está em `contador-google/Codigo.gs`.
 
-- Cada toque em uma rede envia ao contador **só** `{ postId, network }`, sem IP, cookie ou identificador.
+- Cada toque em uma rede envia ao contador **só** `{ postId, network }`, sem cookie ou identificador. O Google não repassa ao script o IP de quem acessa.
 - O próprio celular guarda (no `localStorage`) quais post/rede já foram contados: cada aparelho conta **1 vez por post e por rede**.
 - A página inicial mostra "X pessoas já compartilharam hoje · veja os números".
-- A página pública **`/numeros/`** ("Veja os números", também no rodapé) mostra os compartilhamentos de hoje e do período (hoje, 7, 30 ou 90 dias), **por rede**, **por post** e **por dia**. Qualquer pessoa pode ver; não há senha.
+- A página pública **`/numeros/`** ("Veja os números", também no rodapé) mostra hoje e o período (hoje, 7, 30 ou 90 dias), **por rede**, **por post** e **por dia**.
+- A planilha "Espalha Hoje – contador" fica no seu Google Drive: dá para abrir e ver (ou somar) os números lá também.
 
-### Como está ligado
+### Como ativar (≈5 minutos, uma vez só)
 
-Em `data/config.json`: `"counter_endpoint": "/api/contador.php"`. Para desligar, deixe vazio (`""`): o contador, a frase da página inicial e o link "Veja os números" somem.
+1. Acesse **https://script.google.com** (entre com a conta Google que vai guardar os números) → **Novo projeto**.
+2. Apague o código que aparece, abra `contador-google/Codigo.gs` deste projeto, copie **tudo** e cole lá. Clique no disquete (**Salvar**). Se quiser, dê o nome "Espalha Hoje contador".
+3. Na barra de cima, escolha a função **`configurar`** e clique em **Executar**.
+   - O Google pede autorização: **Revisar permissões** → escolha sua conta → **Avançado** → **Acessar Espalha Hoje contador (não seguro)** → **Permitir**. ("Não seguro" aparece porque o script é seu e não foi verificado pelo Google.)
+   - No "Registro de execução" aparece o link da planilha criada.
+4. Clique em **Implantar → Nova implantação** → no ícone de engrenagem escolha **App da Web**:
+   - Executar como: **Eu**
+   - Quem pode acessar: **Qualquer pessoa**
+   - **Implantar** → copie o **URL do app da Web** (termina em `/exec`).
+5. Cole esse endereço em `data/config.json`:
+   ```json
+   "counter_endpoint": "https://script.google.com/macros/s/XXXXXXXX/exec"
+   ```
+6. Rode `npm run publicar`. O build libera esse endereço na política de segurança automaticamente.
+7. `npm run conferir` deve mostrar "✔ Contador funcionando".
 
-### Onde ficam os dados
+Para desligar o contador, deixe `"counter_endpoint": ""` e publique: somem a frase da página inicial e o link "Veja os números".
 
-Numa pasta `espalha-hoje-dados`, criada automaticamente **ao lado** da `public_html` (fora dela). Assim, extrair um `site.zip` novo nunca apaga a contagem, e ninguém consegue baixar o arquivo de dados pelo navegador. Se a hospedagem não permitir criar essa pasta, o contador usa `public_html/api/dados/`, protegida por `.htaccess`.
-
-O contador usa SQLite (disponível na Hostinger); se não houver, grava num arquivo JSON com trava. Os dois modos são testados.
+**Se mudar o código do Apps Script:** use **Implantar → Gerenciar implantações → editar (lápis) → Versão: Nova versão → Implantar**. Assim o endereço `/exec` continua o mesmo.
 
 ### Rotas
 
 | Rota | Uso |
 |---|---|
-| `POST /api/contador.php?acao=hit` | Corpo `{"postId":"2026-10-14-01","network":"whatsapp"}`. Soma 1. Só aceita posts que existem no site e as redes: whatsapp, telegram, x, threads, facebook, reddit, instagram, tiktok, kwai, nativo. |
-| `GET /api/contador.php?acao=hoje` | `{"dia":"2026-10-14","total":123}` |
-| `GET /api/contador.php?acao=numeros&dias=7` | Totais de hoje e do período, por rede, por post e por dia. |
+| `POST …/exec?acao=hit` | Corpo `{"postId":"2026-10-14-01","network":"whatsapp"}`. Soma 1. Só aceita posts que existem no site e as redes: whatsapp, telegram, x, threads, facebook, reddit, instagram, tiktok, kwai, nativo. |
+| `GET …/exec?acao=hoje` | `{"dia":"2026-10-14","total":123}` |
+| `GET …/exec?acao=numeros&dias=7` | Totais de hoje e do período, por rede, por post e por dia. |
 
 ### Limites (para saber o que esperar)
 
 - **"pessoas" na frase da página inicial é uma aproximação:** o número soma compartilhamentos (1 por post/rede/aparelho). Quem compartilha 3 posts em 2 redes conta 6.
 - O contador registra o **toque no botão** da rede, não a publicação em si.
 - **É possível inflar o contador** de propósito (limpando o navegador ou chamando a rota direto). Sem identificar pessoas, isso não tem como ser evitado 100%. Use o número como termômetro.
-- O servidor da Hostinger, como qualquer servidor, recebe o IP na conexão e pode guardá-lo nos logs de acesso da hospedagem. O contador não lê nem grava esse IP.
-- No computador, o `npm run dev` não roda PHP: a contagem só funciona no site publicado.
+- O Apps Script gratuito atende bem dezenas de cliques por minuto. Em picos muito grandes (milhares ao mesmo tempo), alguns cliques podem não ser contados — o compartilhamento em si nunca é afetado.

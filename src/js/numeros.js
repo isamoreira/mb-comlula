@@ -7,6 +7,7 @@
     config = JSON.parse(document.getElementById('eh-config').textContent);
   } catch (e) {}
   var base = String(config.counter_endpoint || '');
+  var BASE = config.base || '/'; // pasta do site
   var saida = document.getElementById('numeros');
   var seletor = document.getElementById('numeros-dias');
 
@@ -57,7 +58,7 @@
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
       }),
-      fetch('/data/posts.json', { cache: 'no-cache' }).then(function (r) {
+      fetch(BASE + 'data/posts.json', { cache: 'no-cache' }).then(function (r) {
         return r.ok ? r.json() : [];
       }),
     ])
@@ -81,7 +82,7 @@
     var maxRede = Math.max.apply(null, [1].concat(redes.map(function (r) { return r.valor; })));
 
     var porPost = d.por_post.map(function (p) {
-      var nome = titulos[p.post_id] ? '<a href="/p/' + esc(p.post_id) + '/">' + esc(titulos[p.post_id]) + '</a>' : esc(p.post_id);
+      var nome = titulos[p.post_id] ? '<a href="' + BASE + 'p/' + esc(p.post_id) + '/">' + esc(titulos[p.post_id]) + '</a>' : esc(p.post_id);
       return { nome: nome, valor: p.total };
     });
     var maxPost = Math.max.apply(null, [1].concat(porPost.map(function (p) { return p.valor; })));

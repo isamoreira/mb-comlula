@@ -38,8 +38,11 @@ const config = lerJson('data/config.json');
 const posts = lerJson('data/posts.json', BASE);
 
 // Prioridade: variável SITE_URL > data/config.json > URL automática do Netlify > localhost.
-const SITE_URL = String(process.env.SITE_URL || config.site_url || process.env.URL || 'http://localhost:8080').replace(/\/+$/, '');
+// No modo de exemplo (testes), o padrão é o servidor local na raiz.
+const SITE_URL = String(process.env.SITE_URL || (EXEMPLO ? 'http://localhost:8099' : config.site_url) || process.env.URL || 'http://localhost:8080').replace(/\/+$/, '');
 const VERSAO = Date.now().toString(36);
+// Pasta do site no endereço público (ex.: "/mb-comlula/" no GitHub Pages; "/" num domínio próprio).
+const B = new URL(SITE_URL + '/').pathname.replace(/\/+$/, '') + '/';
 // Endereço do contador (fase 2). A variável COUNTER_ENDPOINT tem prioridade sobre o config.
 const CONTADOR = String(process.env.COUNTER_ENDPOINT || config.counter_endpoint || '').replace(/\/+$/, '');
 const COR = /^#[0-9a-f]{6}$/i.test(config.primary_color || '') ? config.primary_color : '#C4122F';
@@ -195,6 +198,7 @@ const CONFIG_PUBLICA = {
   project_name: NOME,
   default_credit: config.default_credit || '',
   counter_endpoint: CONTADOR,
+  base: B,
 };
 
 let LOGO_PUBLICO = 'assets/logo.svg';
@@ -205,15 +209,16 @@ function cabecalhoHtml({ titulo, descricao, canonical, imagem, imagemAlt, tipo =
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="${politicaCsp({ paraMeta: true })}">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(titulo)}</title>
 <meta name="description" content="${esc(descricao)}">
 ${noindex ? '<meta name="robots" content="noindex, nofollow">' : `<link rel="canonical" href="${esc(canonical)}">`}
 <meta name="theme-color" content="${COR}">
 <meta name="color-scheme" content="light dark">
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/${LOGO_PUBLICO}">
-<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="manifest" href="${B}manifest.webmanifest">
+<link rel="icon" href="${B}${LOGO_PUBLICO}">
+<link rel="apple-touch-icon" href="${B}icons/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="${esc(NOME)}">
@@ -231,13 +236,13 @@ ${img.w ? `<meta property="og:image:width" content="${img.w}">\n<meta property="
 <meta name="twitter:description" content="${esc(descricao)}">
 <meta name="twitter:image" content="${esc(img.url)}">
 <meta name="twitter:image:alt" content="${esc(imagemAlt || titulo)}">
-<link rel="stylesheet" href="/css/style.css?v=${VERSAO}">
-<link rel="stylesheet" href="/css/theme.css?v=${VERSAO}">
+<link rel="stylesheet" href="${B}css/style.css?v=${VERSAO}">
+<link rel="stylesheet" href="${B}css/theme.css?v=${VERSAO}">
 </head>`;
 }
 
 function topoHtml({ home = false } = {}) {
-  const marca = `<a class="topo__marca" href="/"><img class="topo__logo" src="/${LOGO_PUBLICO}" alt="" width="44" height="44"><span class="topo__nome">${esc(NOME)}</span></a>`;
+  const marca = `<a class="topo__marca" href="${B}"><img class="topo__logo" src="${B}${LOGO_PUBLICO}" alt="" width="44" height="44"><span class="topo__nome">${esc(NOME)}</span></a>`;
   if (!home) return `<header class="topo"><div class="wrap">${marca}</div></header>`;
   return `<header class="topo"><div class="wrap">
   <h1 class="sr-only">${esc(NOME)}: conteúdos de hoje</h1>
@@ -254,10 +259,10 @@ function rodapeHtml({ creditos = '' } = {}) {
   <p id="creditos">${esc(creditos)}</p>
   <p>Este site não usa cookies nem rastreadores.</p>
   <nav class="rodape__links" aria-label="Links do rodapé">
-    <a href="/">Conteúdos de hoje</a>
-    <a href="/arquivo/">Dias anteriores</a>
-    ${CONTADOR ? '<a href="/numeros/">Veja os números</a>' : ''}
-    <a href="/privacidade/">Privacidade</a>
+    <a href="${B}">Conteúdos de hoje</a>
+    <a href="${B}arquivo/">Dias anteriores</a>
+    ${CONTADOR ? `<a href="${B}numeros/">Veja os números</a>` : ''}
+    <a href="${B}privacidade/">Privacidade</a>
   </nav>
 </div></footer>`;
 }
@@ -326,8 +331,8 @@ function scriptsHtml(extra = '') {
   return `<div class="toast" id="toast" role="status" aria-live="polite" popover="manual"></div>
 <script type="application/json" id="eh-config">${jsonSeguro(CONFIG_PUBLICA)}</script>
 ${extra}
-<script src="/js/share.js?v=${VERSAO}" defer></script>
-${CONTADOR ? `<script src="/js/contador.js?v=${VERSAO}" defer></script>\n` : ''}<script src="/js/app.js?v=${VERSAO}" defer></script>`;
+<script src="${B}js/share.js?v=${VERSAO}" defer></script>
+${CONTADOR ? `<script src="${B}js/contador.js?v=${VERSAO}" defer></script>\n` : ''}<script src="${B}js/app.js?v=${VERSAO}" defer></script>`;
 }
 
 function paginaHome({ canonical }) {
@@ -344,7 +349,7 @@ ${topoHtml({ home: true })}
   <div class="posts" id="posts" aria-busy="true" aria-live="polite">
     <p class="carregando">Carregando os conteúdos de hoje…</p>
   </div>
-  <noscript><p class="aviso">Para compartilhar, ative o JavaScript. Você também pode ver a <a href="/arquivo/">lista de conteúdos</a>.</p></noscript>
+  <noscript><p class="aviso">Para compartilhar, ative o JavaScript. Você também pode ver a <a href="${B}arquivo/">lista de conteúdos</a>.</p></noscript>
 </div></main>
 ${rodapeHtml()}
 ${painelHtml()}
@@ -360,13 +365,13 @@ function paginaPost(post, og) {
   const canonical = urlAbs(`p/${post.id}/`);
   const alt = m.alt || post.title;
   const fallback = `<noscript><article class="card">
-    <div class="card__media"><img src="/${esc(m.thumb || m.file)}" alt="${esc(alt)}"></div>
+    <div class="card__media"><img src="${B}${esc(m.thumb || m.file)}" alt="${esc(alt)}"></div>
     <div class="card__body">
       <p class="card__tema">${esc(post.theme || '')}</p>
       <h2 class="card__titulo">${esc(post.title)}</h2>
       <p class="card__legenda">${esc(legenda)}</p>
       <p class="card__tags">${esc((post.hashtags || []).join(' '))}</p>
-      <a class="btn btn--primary btn--grande" href="/${esc(m.file)}" download>Baixar mídia</a>
+      <a class="btn btn--primary btn--grande" href="${B}${esc(m.file)}" download>Baixar mídia</a>
     </div></article></noscript>`;
   return `${cabecalhoHtml({
     titulo: post.title,
@@ -381,7 +386,7 @@ function paginaPost(post, og) {
 ${topoHtml()}
 <main id="conteudo"><div class="wrap">
   <h1 class="sr-only">${esc(post.title)}</h1>
-  <p><a class="voltar" href="/">← Ver todos os conteúdos de hoje</a></p>
+  <p><a class="voltar" href="${B}">← Ver todos os conteúdos de hoje</a></p>
   <div class="posts" id="posts" aria-live="polite">${fallback}</div>
 </div></main>
 ${rodapeHtml({ creditos: `Créditos dos conteúdos: ${post.credit || config.default_credit || ''}.` })}
@@ -413,7 +418,7 @@ function paginaArquivo() {
     titulo: 'Dias anteriores',
     descricao: 'Conteúdos de dias anteriores.',
     canonical: urlAbs('arquivo/'),
-    corpo: `<p><a class="voltar" href="/">← Voltar para hoje</a></p>
+    corpo: `<p><a class="voltar" href="${B}">← Voltar para hoje</a></p>
 <h1>Dias anteriores</h1>
 <div id="lista-arquivo" aria-busy="true"><p class="carregando">Carregando…</p></div>`,
   });
@@ -425,11 +430,11 @@ function paginaPrivacidade() {
     titulo: 'Privacidade',
     descricao: 'Este site não coleta dados pessoais.',
     canonical: urlAbs('privacidade/'),
-    corpo: `<p><a class="voltar" href="/">← Voltar para hoje</a></p>
+    corpo: `<p><a class="voltar" href="${B}">← Voltar para hoje</a></p>
 <h1>Privacidade</h1>
 <p><strong>Este site não coleta dados pessoais.</strong> Não há login, cadastro, formulários, cookies, Google Analytics ou qualquer rastreador de terceiros.</p>
 <h2>O que é contado</h2>
-<p>Quando a contagem está ativada, registramos apenas <strong>quantas vezes</strong> cada conteúdo foi compartilhado e em qual rede social (por exemplo: "post X, WhatsApp, +1"). Não registramos endereço IP, identificador do aparelho, localização nem qualquer informação sobre quem compartilhou. Os totais ficam públicos na página <a href="/numeros/">Veja os números</a>.</p>
+<p>Quando a contagem está ativada, registramos apenas <strong>quantas vezes</strong> cada conteúdo foi compartilhado e em qual rede social (por exemplo: "post X, WhatsApp, +1"). Não registramos endereço IP, identificador do aparelho, localização nem qualquer informação sobre quem compartilhou. Os totais ficam públicos na página <a href="${B}numeros/">Veja os números</a>.</p>
 <p>Para evitar contar duas vezes o mesmo compartilhamento, o seu navegador guarda localmente (no próprio aparelho, sem enviar a ninguém) uma marcação do tipo "este post já foi contado nesta rede". Você pode apagá-la limpando os dados do site no navegador.</p>
 <h2>Redes sociais</h2>
 <p>Ao tocar em uma rede social, você é levado ao site ou app daquela rede, que tem a própria política de privacidade. Os links levam um parâmetro de campanha (UTM) que indica apenas a rede e a data do conteúdo.</p>
@@ -446,7 +451,7 @@ function paginaNumeros() {
     titulo: 'Veja os números',
     descricao: 'Quantas vezes os conteúdos foram compartilhados, e em quais redes.',
     canonical: urlAbs('numeros/'),
-    corpo: `<p><a class="voltar" href="/">← Voltar para hoje</a></p>
+    corpo: `<p><a class="voltar" href="${B}">← Voltar para hoje</a></p>
 <h1>Veja os números</h1>
 <p><label for="numeros-dias">Período: </label>
 <select id="numeros-dias" class="btn btn--ghost">
@@ -457,7 +462,7 @@ function paginaNumeros() {
 </select></p>
 <div id="numeros" aria-live="polite" aria-busy="true"><p class="carregando">Carregando…</p></div>
 <p class="painel__nota">Cada toque em uma rede conta 1 vez por post, por rede e por celular. Contagem anônima: sem IP, cookie ou cadastro.</p>`,
-    extraScripts: `<script src="/js/numeros.js?v=${VERSAO}" defer></script>`,
+    extraScripts: `<script src="${B}js/numeros.js?v=${VERSAO}" defer></script>`,
   });
 }
 
@@ -470,7 +475,7 @@ function pagina404() {
     noindex: true,
     corpo: `<h1>Página não encontrada</h1>
 <p>Esse endereço não existe (ou o conteúdo foi removido).</p>
-<p><a class="btn btn--primary" href="/">Ver os conteúdos de hoje</a></p>`,
+<p><a class="btn btn--primary" href="${B}">Ver os conteúdos de hoje</a></p>`,
   });
 }
 
@@ -490,19 +495,19 @@ function temaCss() {
 function manifest(temIcones) {
   const icones = temIcones
     ? [
-        { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-        { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-        { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        { src: B + 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+        { src: B + 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+        { src: B + 'icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
       ]
-    : [{ src: '/' + LOGO_PUBLICO, sizes: 'any' }];
+    : [{ src: B + LOGO_PUBLICO, sizes: 'any' }];
   return JSON.stringify(
     {
       name: NOME,
       short_name: NOME.length > 12 ? NOME.split(' ')[0] : NOME,
       description: config.tagline || '',
       lang: 'pt-BR',
-      start_url: '/?origem=app',
-      scope: '/',
+      start_url: B + '?origem=app',
+      scope: B,
       display: 'standalone',
       background_color: COR,
       theme_color: COR,
@@ -513,13 +518,18 @@ function manifest(temIcones) {
   );
 }
 
-function headers() {
-  // Content-Security-Policy: só recursos do próprio site (+ endpoint do contador, se houver).
+// Content-Security-Policy: só recursos do próprio site (+ endereço do contador, se houver).
+// Vai no cabeçalho HTTP (_headers/.htaccess) e também numa <meta> em cada página, porque o
+// GitHub Pages não deixa configurar cabeçalhos. Na <meta>, "frame-ancestors" não vale e fica de fora.
+function politicaCsp({ paraMeta = false } = {}) {
   let conexoes = "'self'";
   // Endereço relativo (ex.: "/api/contador.php") já é coberto por 'self'.
   if (CONTADOR && !CONTADOR.startsWith('/')) {
     try {
-      conexoes += ' ' + new URL(CONTADOR).origin;
+      const origem = new URL(CONTADOR).origin;
+      conexoes += ' ' + origem;
+      // O Google Apps Script responde redirecionando para script.googleusercontent.com.
+      if (origem === 'https://script.google.com') conexoes += ' https://script.googleusercontent.com';
     } catch (e) {
       falhar('"counter_endpoint" em data/config.json não é uma URL válida.');
     }
@@ -536,8 +546,14 @@ function headers() {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "frame-ancestors 'none'",
-  ].join('; ');
+  ]
+    .concat(paraMeta ? [] : ["frame-ancestors 'none'"])
+    .join('; ');
+  return csp;
+}
+
+function headers() {
+  const csp = politicaCsp();
   return `# Cabeçalhos HTTP (Cloudflare Pages e Netlify leem este arquivo).
 /*
   Content-Security-Policy: ${csp}
@@ -609,7 +625,6 @@ async function main() {
   // Arquivos estáticos e mídias.
   copiarPasta(path.join(SRC, 'css'), path.join(DIST, 'css'));
   copiarPasta(path.join(SRC, 'js'), path.join(DIST, 'js'));
-  copiarPasta(path.join(SRC, 'api'), path.join(DIST, 'api')); // contador (PHP, roda na Hostinger)
   copiarPasta(path.join(BASE, 'media'), path.join(DIST, 'media'));
   escrever('css/theme.css', temaCss());
 
@@ -670,18 +685,18 @@ async function main() {
   // PWA e configuração de hospedagem.
   escrever('manifest.webmanifest', manifest(temIcones));
   const shell = [
-    '/',
-    '/arquivo/',
-    '/privacidade/',
-    `/css/style.css?v=${VERSAO}`,
-    `/css/theme.css?v=${VERSAO}`,
-    `/js/share.js?v=${VERSAO}`,
-    `/js/app.js?v=${VERSAO}`,
-    ...(CONTADOR ? [`/js/contador.js?v=${VERSAO}`] : []),
-    '/data/posts.json',
-    '/manifest.webmanifest',
-    '/' + LOGO_PUBLICO,
-  ].concat(temIcones ? ['/icons/icon-192.png'] : []);
+    B,
+    B + 'arquivo/',
+    B + 'privacidade/',
+    `${B}css/style.css?v=${VERSAO}`,
+    `${B}css/theme.css?v=${VERSAO}`,
+    `${B}js/share.js?v=${VERSAO}`,
+    `${B}js/app.js?v=${VERSAO}`,
+    ...(CONTADOR ? [`${B}js/contador.js?v=${VERSAO}`] : []),
+    B + 'data/posts.json',
+    B + 'manifest.webmanifest',
+    B + LOGO_PUBLICO,
+  ].concat(temIcones ? [B + 'icons/icon-192.png'] : []);
   const sw = fs
     .readFileSync(path.join(SRC, 'sw.js'), 'utf8')
     .replace("var VERSAO = '__VERSAO__';", `var VERSAO = '${VERSAO}';`)
@@ -690,7 +705,8 @@ async function main() {
   escrever('sw.js', sw);
   escrever('_headers', headers());
   escrever('.htaccess', htaccess());
-  escrever('robots.txt', 'User-agent: *\nDisallow: /api/\n');
+  escrever('robots.txt', 'User-agent: *\nAllow: /\n');
+  escrever('.nojekyll', ''); // GitHub Pages: servir os arquivos como estão (sem processar com Jekyll)
 
   const dias = new Set(publicos.map((p) => p.date)).size;
   console.log(`✔ Build concluído em ${Date.now() - inicio} ms → ${path.basename(DIST)}/${EXEMPLO ? ' (posts de exemplo, só para testes)' : ''}`);

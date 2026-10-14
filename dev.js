@@ -44,16 +44,40 @@ function resolver(urlPath) {
   return candidatos.find((c) => fs.existsSync(c) && fs.statSync(c).isFile()) || null;
 }
 
+// O site pode morar numa subpasta (ex.: "/mb-comlula/" no GitHub Pages). Simulamos o mesmo aqui,
+// lendo o endereço público gravado no build.
+const PREFIXO = (() => {
+  const og = (/og:url" content="([^"]*)"/.exec(fs.readFileSync(path.join(DIST, 'index.html'), 'utf8')) || [])[1];
+  try {
+    return og ? new URL(og).pathname : '/';
+  } catch (e) {
+    return '/';
+  }
+})();
+
 const servidor = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
 
-  // /hoje → /hoje/ (igual ao Cloudflare Pages/Netlify)
-  if (!url.pathname.endsWith('/') && !path.extname(url.pathname) && fs.existsSync(path.join(DIST, url.pathname, 'index.html'))) {
+  if (PREFIXO !== '/') {
+    // "/" ou "/mb-comlula" → "/mb-comlula/"
+    if (url.pathname === '/' || url.pathname + '/' === PREFIXO) {
+      res.writeHead(302, { Location: PREFIXO + url.search });
+      return res.end();
+    }
+    if (!url.pathname.startsWith(PREFIXO)) {
+      res.writeHead(404, { 'Content-Type': TIPOS['.html'] });
+      return fs.createReadStream(path.join(DIST, '404.html')).pipe(res);
+    }
+  }
+  const caminho = '/' + url.pathname.slice(PREFIXO.length);
+
+  // /hoje → /hoje/ (igual ao GitHub Pages, Cloudflare Pages e Netlify)
+  if (!caminho.endsWith('/') && !path.extname(caminho) && fs.existsSync(path.join(DIST, caminho, 'index.html'))) {
     res.writeHead(301, { Location: url.pathname + '/' + url.search });
     return res.end();
   }
 
-  const arquivo = resolver(url.pathname);
+  const arquivo = resolver(caminho);
   if (!arquivo) {
     res.writeHead(404, { 'Content-Type': TIPOS['.html'] });
     return fs.createReadStream(path.join(DIST, '404.html')).pipe(res);
@@ -78,12 +102,12 @@ const servidor = http.createServer((req, res) => {
 });
 
 servidor.listen(PORTA, () => {
-  console.log(`\nEspalha Hoje rodando em: http://localhost:${PORTA}`);
+  console.log(`\nEspalha Hoje rodando em: http://localhost:${PORTA}${PREFIXO}`);
   const ips = Object.values(os.networkInterfaces())
     .flat()
     .filter((i) => i && i.family === 'IPv4' && !i.internal)
     .map((i) => i.address);
-  ips.forEach((ip) => console.log(`No celular (mesmo Wi-Fi):  http://${ip}:${PORTA}`));
+  ips.forEach((ip) => console.log(`No celular (mesmo Wi-Fi):  http://${ip}:${PORTA}${PREFIXO}`));
   console.log('\nObs.: no celular via IP local (sem HTTPS), "copiar" e a lista nativa de apps podem não funcionar.');
   console.log('Isso funciona normalmente depois do deploy (HTTPS). Ctrl+C para parar.\n');
 });

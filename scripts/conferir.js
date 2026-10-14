@@ -43,8 +43,8 @@ const DIST = path.join(__dirname, '..', 'dist');
     console.log(`✖ ${lista.length} arquivo(s) faltando ou diferentes no servidor${midias.length ? ` (${midias.length} mídias: fotos/vídeos)` : ''}:`);
     lista.slice(0, 15).forEach((r) => console.log('   - ' + r));
     if (lista.length > 15) console.log(`   … e mais ${lista.length - 15}.`);
-    console.log('\n→ Rode "npm run pacote", envie o site.zip e extraia na public_html (sem apagar nada antes).');
-    console.log('  Se acabou de enviar, espere 1–2 minutos (cache da Hostinger) e confira de novo.');
+    console.log('\n→ Se acabou de publicar, espere 1–2 minutos e confira de novo.');
+    console.log('  Se continuar faltando, rode "npm run publicar".');
   }
   if (contador) console.log(contador);
   process.exit(faltando.size ? 1 : 0);

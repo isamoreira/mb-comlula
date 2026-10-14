@@ -7,6 +7,8 @@
   var Share = window.EHShare;
   var config = lerJson('eh-config') || {};
   var pagina = document.body.getAttribute('data-page');
+  // Pasta do site (ex.: "/mb-comlula/" no GitHub Pages). Todos os caminhos partem daqui.
+  var BASE = config.base || '/';
 
   // Posts carregados na página, por id.
   var postsPorId = {};
@@ -64,7 +66,7 @@
   }
 
   function urlDaPagina(post) {
-    return location.origin + '/p/' + encodeURIComponent(post.id) + '/';
+    return location.origin + BASE + 'p/' + encodeURIComponent(post.id) + '/';
   }
 
   function nomeDoArquivo(post) {
@@ -166,8 +168,8 @@
     if (m.type === 'video') {
       return (
         '<div class="card__media card__media--video">' +
-        '<video controls playsinline preload="none" poster="/' + esc(m.thumb || '') + '" aria-label="Vídeo: ' + esc(alt) + '">' +
-        '<source src="/' + esc(m.file) + '">' +
+        '<video controls playsinline preload="none" poster="' + esc(BASE + (m.thumb || '')) + '" aria-label="Vídeo: ' + esc(alt) + '">' +
+        '<source src="' + esc(BASE + m.file) + '">' +
         'Seu navegador não reproduz este vídeo. Use o botão "Salvar no celular".' +
         '</video></div>'
       );
@@ -175,7 +177,7 @@
     var carregamento = prioridade ? ' fetchpriority="high"' : ' loading="lazy"';
     return (
       '<div class="card__media">' +
-      '<img src="/' + esc(m.thumb || m.file) + '" alt="' + esc(alt) + '"' + dims + carregamento + ' decoding="async">' +
+      '<img src="' + esc(BASE + (m.thumb || m.file)) + '" alt="' + esc(alt) + '"' + dims + carregamento + ' decoding="async">' +
       '</div>'
     );
   }
@@ -183,7 +185,7 @@
   function htmlCard(post, indice, tituloComLink) {
     var legendas = post.captions || [];
     var atual = Math.floor(Math.random() * legendas.length) || 0; // começa sorteada
-    var tituloHtml = tituloComLink ? '<a href="/p/' + esc(post.id) + '/">' + esc(post.title) + '</a>' : esc(post.title);
+    var tituloHtml = tituloComLink ? '<a href="' + BASE + 'p/' + esc(post.id) + '/">' + esc(post.title) + '</a>' : esc(post.title);
     var fonte = post.source_url
       ? ' · <a href="' + esc(post.source_url) + '" rel="noopener noreferrer" target="_blank">Fonte</a>'
       : '';
@@ -204,7 +206,7 @@
       '<div class="card__acoes">' +
       botaoTrocar +
       '<button type="button" class="btn btn--ghost" data-acao="copiar">' + ICONES.copy + '<span>Copiar legenda</span></button>' +
-      '<a class="btn btn--ghost" data-acao="baixar" href="/' + esc(post.media.file) + '" download="' + esc(nomeDoArquivo(post)) + '">' + ICONES.download + '<span>Salvar no celular</span></a>' +
+      '<a class="btn btn--ghost" data-acao="baixar" href="' + esc(BASE + post.media.file) + '" download="' + esc(nomeDoArquivo(post)) + '">' + ICONES.download + '<span>Salvar no celular</span></a>' +
       '</div>' +
       '<p class="card__credito">Crédito: ' + esc(post.credit || config.default_credit || '') + fonte + '</p>' +
       '</div></article>'
@@ -296,7 +298,7 @@
         f(item);
       });
     }
-    fetch('/' + post.media.file)
+    fetch(BASE + post.media.file)
       .then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         var total = Number(r.headers.get('content-length')) || 0;
@@ -359,14 +361,14 @@
     }
     var dados = { files: [item.pronto] };
     if (!podeEnviar(dados)) {
-      location.href = '/' + post.media.file;
+      location.href = BASE + post.media.file;
       return;
     }
     toast(post.media.type === 'video' ? 'Escolha "Salvar vídeo" na lista.' : 'Escolha "Salvar imagem" na lista.');
     navigator.share(dados).catch(function (erro) {
       if (erro && erro.name === 'AbortError') return;
       // Se a lista de apps recusar, abre o arquivo direto (download comum).
-      location.href = '/' + post.media.file;
+      location.href = BASE + post.media.file;
     });
   }
 
@@ -396,7 +398,7 @@
 
     // Download/salvar.
     painel.querySelectorAll('[data-painel-baixar]').forEach(function (a) {
-      a.href = '/' + post.media.file;
+      a.href = BASE + post.media.file;
       a.setAttribute('download', nomeDoArquivo(post));
     });
 
@@ -604,8 +606,8 @@
     if (!('serviceWorker' in navigator)) return;
     var urls = [];
     posts.forEach(function (p) {
-      if (p.media.thumb) urls.push('/' + p.media.thumb);
-      if (p.media.type === 'image') urls.push('/' + p.media.file);
+      if (p.media.thumb) urls.push(BASE + p.media.thumb);
+      if (p.media.type === 'image') urls.push(BASE + p.media.file);
     });
     navigator.serviceWorker.ready.then(function (reg) {
       if (reg.active) reg.active.postMessage({ tipo: 'guardar', urls: urls });
@@ -613,7 +615,7 @@
   }
 
   function carregarPosts() {
-    return fetch('/data/posts.json', { cache: 'no-cache' }).then(function (r) {
+    return fetch(BASE + 'data/posts.json', { cache: 'no-cache' }).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     });
@@ -674,7 +676,7 @@
           var aviso = document.getElementById('aviso-dia');
           aviso.innerHTML =
             'Conteúdos de <strong>' + esc(dataCurta(dia)) + '</strong>' +
-            (pedido ? ' · <a href="/">ver os mais recentes</a>' : '');
+            (pedido ? ' · <a href="' + BASE + '">ver os mais recentes</a>' : '');
           aviso.hidden = false;
         }
 
@@ -731,11 +733,11 @@
                 return a.id < b.id ? -1 : 1;
               })
               .map(function (p) {
-                return '<li><a href="/p/' + esc(p.id) + '/">' + esc(p.title) + '</a>' + (p.theme ? ' <span class="arquivo__tema">' + esc(p.theme) + '</span>' : '') + '</li>';
+                return '<li><a href="' + BASE + 'p/' + esc(p.id) + '/">' + esc(p.title) + '</a>' + (p.theme ? ' <span class="arquivo__tema">' + esc(p.theme) + '</span>' : '') + '</li>';
               })
               .join('');
             return (
-              '<section class="arquivo__dia"><h2><a href="/?d=' + esc(d) + '">' + esc(dataLonga(d)) + '</a></h2><ul>' + itens + '</ul></section>'
+              '<section class="arquivo__dia"><h2><a href="' + BASE + '?d=' + esc(d) + '">' + esc(dataLonga(d)) + '</a></h2><ul>' + itens + '</ul></section>'
             );
           })
           .join('');
@@ -756,7 +758,7 @@
   // PWA: registra o service worker.
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/sw.js').catch(function () {});
+      navigator.serviceWorker.register(BASE + 'sw.js', { scope: BASE }).catch(function () {});
     });
   }
 

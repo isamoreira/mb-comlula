@@ -150,10 +150,10 @@ async function novoPost(posts, config) {
     console.log('✔ Missão atualizada em data/config.json');
   }
 
-  const build = (await rl.question('\nGerar o site agora (npm run build)? (S/n): ')).trim().toLowerCase();
+  const build = (await rl.question('\nPublicar agora no GitHub Pages (npm run publicar)? (S/n): ')).trim().toLowerCase();
   rl.close();
   if (build !== 'n' && build !== 'nao' && build !== 'não') {
-    spawnSync(process.execPath, [path.join(RAIZ, 'build.js')], { stdio: 'inherit' });
+    spawnSync(process.execPath, [path.join(RAIZ, 'scripts/publicar.js')], { stdio: 'inherit' });
   }
   console.log('\nPróximo passo: publique (veja "Publicar os posts do dia" no README).');
 })().catch((e) => {

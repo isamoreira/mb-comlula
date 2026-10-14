@@ -59,7 +59,7 @@
         var n = new Intl.NumberFormat('pt-BR').format(dados.total);
         el.textContent = (dados.total === 1 ? '1 pessoa já compartilhou hoje' : n + ' pessoas já compartilharam hoje') + ' · ';
         var a = document.createElement('a');
-        a.href = '/numeros/';
+        a.href = (config.base || '/') + 'numeros/';
         a.textContent = 'veja os números';
         el.appendChild(a);
         el.hidden = false;

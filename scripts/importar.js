@@ -335,11 +335,10 @@ async function importar(c, data, posts, config, hashtagsGerais) {
     console.log('✔ Missão atualizada.');
   }
 
-  const gerar = SEM_PERGUNTAS ? 'n' : (await perguntar('\nGerar o site.zip agora (npm run pacote)? (S/n): ', 's')).toLowerCase();
+  const gerar = SEM_PERGUNTAS ? 'n' : (await perguntar('\nPublicar agora no GitHub Pages (npm run publicar)? (S/n): ', 's')).toLowerCase();
   rl.close();
   if (gerar !== 'n' && gerar !== 'nao' && gerar !== 'não') {
-    const b = spawnSync(process.execPath, [path.join(RAIZ, 'build.js')], { stdio: 'inherit' });
-    if (b.status === 0) spawnSync(process.execPath, [path.join(RAIZ, 'scripts/pacote.js')], { stdio: 'inherit' });
+    spawnSync(process.execPath, [path.join(RAIZ, 'scripts/publicar.js')], { stdio: 'inherit' });
   }
 })().catch((e) => {
   rl.close();
