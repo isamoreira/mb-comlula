@@ -1,0 +1,36 @@
+# Gerado pelo build.js. Configuração para Apache/LiteSpeed (Hostinger).
+DirectoryIndex index.html
+ErrorDocument 404 /404.html
+Options -Indexes
+
+AddType application/manifest+json .webmanifest
+AddType image/svg+xml .svg
+AddType video/mp4 .mp4
+AddType video/webm .webm
+
+# Sempre HTTPS (necessário para "Copiar legenda" e para a lista de apps do celular).
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+
+  # HTML, sw.js e posts.json: sempre conferir se há versão nova.
+  <FilesMatch "(\.html|sw\.js|posts\.json|\.webmanifest)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  # CSS/JS têm ?v= no endereço; mídias não mudam de nome.
+  <FilesMatch "\.(css|js|jpg|jpeg|png|webp|gif|svg|mp4|webm)$">
+    Header set Cache-Control "public, max-age=604800"
+  </FilesMatch>
+  <FilesMatch "sw\.js$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

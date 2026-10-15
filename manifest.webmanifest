@@ -1,0 +1,29 @@
+{
+  "name": "Espalha Hoje",
+  "short_name": "Espalha Hoje",
+  "description": "Os conteúdos do dia, prontos para compartilhar.",
+  "lang": "pt-BR",
+  "start_url": "/mb-comlula/?origem=app",
+  "scope": "/mb-comlula/",
+  "display": "standalone",
+  "background_color": "#C4122F",
+  "theme_color": "#C4122F",
+  "icons": [
+    {
+      "src": "/mb-comlula/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/mb-comlula/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/mb-comlula/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
