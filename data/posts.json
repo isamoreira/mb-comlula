@@ -142,5 +142,77 @@
     ],
     "source_url": "https://podeespalhar.com.br/conteudo/5-medidas-para-mei/",
     "credit": "Pode Espalhar (podeespalhar.com.br)"
+  },
+  {
+    "id": "2026-10-15-01",
+    "date": "2026-10-15",
+    "title": "Medo",
+    "theme": "Conteúdos Gerais",
+    "media": {
+      "type": "video",
+      "file": "media/2026-10-15-01.mp4",
+      "thumb": "media/2026-10-15-01-thumb.jpg",
+      "alt": "Medo"
+    },
+    "captions": [
+      "Nós já vivemos isso. E não queremos voltar."
+    ],
+    "hashtags": [
+      "#Lula",
+      "#Brasil",
+      "#Patria",
+      "#Democracia",
+      "#TimeDoLula"
+    ],
+    "source_url": "https://podeespalhar.com.br/conteudo/medo/",
+    "credit": "Pode Espalhar (podeespalhar.com.br)"
+  },
+  {
+    "id": "2026-10-15-02",
+    "date": "2026-10-15",
+    "title": "Tesouraço",
+    "theme": "Conteúdos Gerais",
+    "media": {
+      "type": "video",
+      "file": "media/2026-10-15-02.mp4",
+      "thumb": "media/2026-10-15-02-thumb.jpg",
+      "alt": "Tesouraço"
+    },
+    "captions": [
+      "Não é hora de arriscar o seu futuro e o futuro do nosso Brasil. Vote pensando que não podemos voltar pra trás!"
+    ],
+    "hashtags": [
+      "#Lula",
+      "#Brasil",
+      "#Patria",
+      "#Democracia",
+      "#TimeDoLula"
+    ],
+    "source_url": "https://podeespalhar.com.br/conteudo/tesouraco/",
+    "credit": "Pode Espalhar (podeespalhar.com.br)"
+  },
+  {
+    "id": "2026-10-15-03",
+    "date": "2026-10-15",
+    "title": "Aspas Lula",
+    "theme": "Aspas e cortes Lula",
+    "media": {
+      "type": "image",
+      "file": "media/2026-10-15-03.jpg",
+      "thumb": "media/2026-10-15-03-thumb.jpg",
+      "alt": "Aspas Lula"
+    },
+    "captions": [
+      "Lula trabalha para garantir que cada trabalhador tenha a chance de prosperar no bolso e a certeza de ter seus direitos protegidos.\n\nO papel do Estado é abrir portas, gerar oportunidades e defender o povo brasileiro.\n\nNo 2º turno, escolha quem trabalha por você: vote 13!"
+    ],
+    "hashtags": [
+      "#Lula",
+      "#Brasil",
+      "#Patria",
+      "#Democracia",
+      "#TimeDoLula"
+    ],
+    "source_url": "https://podeespalhar.com.br/conteudo/aspas-lula-3/",
+    "credit": "Pode Espalhar (podeespalhar.com.br)"
   }
 ]
